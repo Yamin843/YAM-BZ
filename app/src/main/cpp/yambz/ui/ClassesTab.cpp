@@ -309,19 +309,11 @@ void ClassesTab::draw() {
     // (يفترض أن JNI_OnLoad قد حفظ g_vm في مكان ما — سنستخدم وظيفة مساعدة)
     // البديل: نطلب من C++ تخزين VM statically
 
-    vm = yambz_getGlobalVM();
-    if (!vm) return;
-    if (vm->GetEnv((void**)&env, JNI_VERSION_1_6) != JNI_OK) {
-        vm->AttachCurrentThread(&env, nullptr);
-    }
-    ClassEnumerator::instance().start(env);
-}
-
 } // namespace yambz
 
-// ===============================================================
-//  Global helper: matches Helpers.h declaration
-// ===============================================================
+// ═══════════════════════════════════════════════════════════
+//  Global helper (matching Helpers.h declaration)
+// ═══════════════════════════════════════════════════════════
 void yambz_startEnumFromUI() {
     JavaVM* vm = yambz_getGlobalVM();
     if (!vm) return;
