@@ -57,11 +57,11 @@ echo "▶ 1/5 Compiling Java (YAM-BZ + Albatross)..."
 JAVA_SOURCES=$(find app/src/main/java -name "*.java")
 [ -n "$JAVA_SOURCES" ] || die "No Java sources"
 
-javac -source 11 -target 11 \
+javac -source 17 -target 17 \
       -encoding UTF-8 \
       -Xlint:-options \
       -Xlint:-deprecation \
-      -cp "$ANDROID_JAR" \
+      -cp "$ANDROID_JAR:$ROOT/albatross-libs/aar/core.jar:$ROOT/albatross-libs/aar/annotation.jar" \
       -d "$BUILD_DIR/classes" \
       $JAVA_SOURCES 2>&1 | tee /tmp/javac.log
 
@@ -83,7 +83,9 @@ echo "▶ 2/5 Building dex (d8)..."
      --lib "$ANDROID_JAR" \
      --min-api "$MIN_SDK" \
      --no-desugaring \
-     $(find "$BUILD_DIR/classes" -name "*.class")
+     $(find "$BUILD_DIR/classes" -name "*.class") \
+     "$ROOT/albatross-libs/aar/core.jar" \
+     "$ROOT/albatross-libs/aar/annotation.jar"
 [ -f "$BUILD_DIR/dex/classes.dex" ] || die "d8 produced no classes.dex"
 echo "  ✅ $(stat -c %s $BUILD_DIR/dex/classes.dex) bytes"
 
