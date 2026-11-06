@@ -1,5 +1,6 @@
 #include "Renderer.h"
 #include "MainWindow.h"
+#include "Notifications.h"
 #include "Theme.h"
 #include "../core/Logger.h"
 
@@ -108,6 +109,7 @@ void Renderer::onDrawFrame(int w, int h) {
 
     ImGui::NewFrame();
     MainWindow::instance().draw();
+    Notifications::instance().draw();
 
     bool cap = io.WantCaptureMouse || io.WantCaptureMouseUnlessPopupClose;
     m_wantMouse.store(cap);
