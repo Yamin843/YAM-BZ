@@ -35,10 +35,10 @@ for f in $(find app/src/main/java -name "*.java"); do
 done
 [ $EXIT -eq 0 ] && echo "  ✅ All good"
 
-# 3) No fldName orphan
+# 3) No fldName as standalone identifier (fldNameLocal is fine)
 echo ""
-echo "▶ No orphan fldName:"
-BAD=$(grep -rln "fldName" app/src/main/java 2>/dev/null || true)
+echo "▶ No orphan fldName (exact word):"
+BAD=$(grep -rlnE '\bfldName\b' app/src/main/java 2>/dev/null || true)
 if [ -n "$BAD" ]; then
     echo "  ❌ $BAD"
     EXIT=1

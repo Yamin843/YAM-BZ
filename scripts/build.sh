@@ -11,7 +11,7 @@ ROOT="$PWD"
 ANDROID_HOME="${ANDROID_HOME:-$HOME/android-sdk}"
 NDK_VERSION="${NDK_VERSION:-27.2.12479018}"
 SDK_PLATFORM="${SDK_PLATFORM:-android-34}"
-BUILD_TOOLS="${BUILD_TOOLS:-34.0.0}"
+BUILD_TOOLS="${BUILD_TOOLS:-35.0.0}"
 ABI="${ABI:-arm64-v8a}"
 MIN_SDK="${MIN_SDK:-26}"
 
@@ -57,7 +57,7 @@ echo "▶ 1/5 Compiling Java (YAM-BZ + Albatross)..."
 JAVA_SOURCES=$(find app/src/main/java -name "*.java")
 [ -n "$JAVA_SOURCES" ] || die "No Java sources"
 
-javac -source 17 -target 17 \
+javac -source 11 -target 11 \
       -encoding UTF-8 \
       -Xlint:-options \
       -Xlint:-deprecation \
@@ -82,7 +82,7 @@ echo "▶ 2/5 Building dex (d8)..."
 "$D8" --output "$BUILD_DIR/dex" \
      --lib "$ANDROID_JAR" \
      --min-api "$MIN_SDK" \
-     --release \
+     --no-desugaring \
      $(find "$BUILD_DIR/classes" -name "*.class")
 [ -f "$BUILD_DIR/dex/classes.dex" ] || die "d8 produced no classes.dex"
 echo "  ✅ $(stat -c %s $BUILD_DIR/dex/classes.dex) bytes"
