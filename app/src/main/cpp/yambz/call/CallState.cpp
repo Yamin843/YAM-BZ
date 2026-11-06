@@ -62,12 +62,12 @@ void openCallForMethod(JNIEnv* env, jobject method) {
         if (pts) {
             jsize n = env->GetArrayLength(pts);
             st.target.argTypes.clear();
-            st.target.args.clear();
+            st.args.clear();
             for (jsize i = 0; i < n; i++) {
                 jobject pt = env->GetObjectArrayElement(pts, i);
                 std::string tn = toString(pt);
                 st.target.argTypes.push_back(tn);
-                st.target.args.push_back(ParamNode::forType(tn));
+                st.args.push_back(ParamNode::forType(tn));
                 if (pt) env->DeleteLocalRef(pt);
             }
             env->DeleteLocalRef(pts);

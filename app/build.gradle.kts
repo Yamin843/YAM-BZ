@@ -28,7 +28,6 @@ android {
                 arguments += listOf(
                     "-DANDROID_STL=c++_shared",
                     "-DCMAKE_BUILD_TYPE=Release",
-                    "-DYAMBZ_TARGET_ABI=$targetAbi"
                 )
             }
         }
