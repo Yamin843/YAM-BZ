@@ -41,7 +41,7 @@ public final class ModBootstrap {
         return sCurrentActivity.get();
     }
 
-    static void setCurrentActivity(Activity a) {
+    public static void setCurrentActivity(Activity a) {
         sCurrentActivity = new WeakReference<>(a);
     }
 

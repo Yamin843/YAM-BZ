@@ -41,8 +41,8 @@ public final class CompileBridge {
         try {
             Member m = resolveMember(spec);
             if (m == null) return "cannot resolve";
-            boolean ok = Albatross.decompileMethod(m, true);
-            return ok ? "OK" : "failed";
+            int result = Albatross.decompileMethod(m, true);
+            return result > 0 ? "OK (" + result + ")" : "failed";
         } catch (Throwable t) {
             return "error: " + t;
         }

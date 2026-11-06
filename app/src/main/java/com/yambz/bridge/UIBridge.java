@@ -149,7 +149,6 @@ public final class UIBridge {
     public static String getCacheDir() { return sCacheDir; }
 
     // Called from JNI
-    private static native void nativeSetCacheDir(String dir);
 
     private static volatile Context sAppContext = null;
 

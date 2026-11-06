@@ -52,7 +52,7 @@ public final class CallBridge {
                     + paramTypes.length + ", got " + arr.length(), 0);
             }
             Object[] args = new Object[arr.length()];
-            for (int i = 0; i < arr.length; i++) {
+            for (int i = 0; i < arr.length(); i++) {
                 args[i] = buildValue(arr.getJSONObject(i), paramTypes[i]);
             }
 

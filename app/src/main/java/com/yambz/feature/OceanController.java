@@ -2,6 +2,8 @@ package com.yambz.feature;
 
 import android.util.Log;
 
+import com.yambz.bridge.ClassBridge;
+
 import com.yambz.bridge.OceanSinkerBridge;
 
 import java.lang.reflect.Constructor;
