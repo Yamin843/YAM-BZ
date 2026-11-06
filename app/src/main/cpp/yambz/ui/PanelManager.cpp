@@ -10,7 +10,7 @@
 namespace yambz {
 
 static JavaVM* g_vm_p = nullptr;
-void panel_setJavaVM(JavaVM* vm) { g_vm_p = vm; }
+
 
 PanelManager& PanelManager::instance() {
     static PanelManager p;
@@ -126,4 +126,5 @@ void PanelManager::hide() {
 
 } // namespace yambz
 
-
+// Global scope: matches Helpers.h declaration
+void panel_setJavaVM(JavaVM* vm) { g_vm_p = vm; }

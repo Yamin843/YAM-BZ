@@ -117,6 +117,14 @@ void CallTab::draw() {
 }
 
 // ─── doInvoke helper ───
+
+
+// helper for CallTab to poll result
+
+
+} // namespace yambz
+
+// Global scope: matches Helpers.h declaration
 void yambz_doInvoke() {
     auto& st = callUI();
     if (!st.target.method) return;
@@ -159,10 +167,8 @@ void yambz_doInvoke() {
     if (jdesc) env->DeleteLocalRef(jdesc);
 }
 
-// helper for CallTab to poll result
+// Global scope: matches Helpers.h declaration
 std::string yambz_getLastResultJson() {
 
     return yambz_callEngineLastResultJson();
 }
-
-} // namespace yambz

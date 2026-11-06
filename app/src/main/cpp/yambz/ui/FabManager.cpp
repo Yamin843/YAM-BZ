@@ -13,7 +13,7 @@ namespace yambz {
 static JavaVM* g_vm = nullptr;
 
 // يجب أن يُستدعى من jni_bridge.cpp
-void fab_setJavaVM(JavaVM* vm) { g_vm = vm; }
+
 
 FabManager& FabManager::instance() {
     static FabManager f;
@@ -128,4 +128,5 @@ void FabManager::onFabTapped() {
 
 } // namespace yambz
 
-
+// Global scope: matches Helpers.h declaration
+void fab_setJavaVM(JavaVM* vm) { g_vm = vm; }
