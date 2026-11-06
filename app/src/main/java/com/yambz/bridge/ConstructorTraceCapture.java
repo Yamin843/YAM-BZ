@@ -10,13 +10,10 @@ import qing.albatross.core.InstructionListener;
 import qing.albatross.core.InvocationContext;
 
 /**
- * ConstructorTraceCapture: كامل باستخدام Albatross.hookInstruction.
+ * ConstructorTraceCapture: full hookInstruction-based constructor tracing.
  *
- * يلتقط:
- * - onEnter (dexPc=0): هذا الكائن لم يُنشأ بعد (self=null), args متاحة
- * - onReturn: الكائن المُنشأ (ret) + args
- *
- * يُستخدم من TraceEngine عند trace constructor.
+ * install() returns boolean (not listenerId — listenerId is package-private
+ * in InstructionListener). Use unHook() to cancel — inherited from parent.
  */
 public class ConstructorTraceCapture extends InstructionListener {
     private static final String TAG = "YAMBZ";
@@ -26,31 +23,42 @@ public class ConstructorTraceCapture extends InstructionListener {
     }
 
     private final int sessionId;
+    private volatile boolean installed = false;
 
     public ConstructorTraceCapture(int sessionId) {
-        super(false);  // traceReturn = false (سنتعامل مع onReturn يدوياً)
+        super(false);  // traceReturn = false; we handle onReturn manually
         this.sessionId = sessionId;
     }
 
     /**
-     * تثبيت المراقب على constructor معيّن.
-     * @return id للاستخدام في unHook (0 إذا فشل)
+     * Install this listener on a constructor.
+     * @return true on success. Use unHook() to cancel.
      */
-    public long install(Constructor<?> ctor, int maxDexPc) {
+    public boolean install(Constructor<?> ctor, int maxDexPc) {
         try {
-            boolean ok = Albatross.hookInstruction(
-                ctor, 0, maxDexPc, this);
-            if (!ok) {
-                Log.e(TAG, "hookInstruction failed for " + ctor);
-                return 0;
+            boolean ok = Albatross.hookInstruction(ctor, 0, maxDexPc, this);
+            if (ok) {
+                installed = true;
+                Log.i(TAG, "ConstructorTraceCapture installed for " + ctor);
+            } else {
+                Log.e(TAG, "hookInstruction returned false for " + ctor);
             }
-            // listenerId يُعيَّن داخلياً بواسطة Albatross
-            return this.listenerId;
+            return ok;
         } catch (Throwable t) {
             Log.e(TAG, "install failed", t);
-            return 0;
+            return false;
         }
     }
+
+    /** Override to mark installed=false. */
+    @Override
+    public synchronized boolean unHook() {
+        boolean ok = super.unHook();
+        installed = false;
+        return ok;
+    }
+
+    public boolean isInstalled() { return installed; }
 
     @Override
     public void onEnter(Member method, Object self, int dexPc, InvocationContext ctx) {

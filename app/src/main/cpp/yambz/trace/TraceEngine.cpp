@@ -160,4 +160,56 @@ void TraceEngine::shutdown(JNIEnv* env) {
     m_methodsCached = false;
 }
 
+
+// ═══════════════════════════════════════════════════════════
+//  Constructor tracing via ConstructorTraceCapture
+// ═══════════════════════════════════════════════════════════
+uint32_t TraceEngine::startConstructorTrace(JNIEnv* env, jobject ctor,
+                                              const TraceSession& cfg) {
+    std::lock_guard<std::mutex> lk(m_mu);
+    if (!m_methodsCached) cacheJavaMethods(env);
+
+    uint32_t id = m_nextId.fetch_add(1);
+
+    // Create ConstructorTraceCapture
+    jclass cls_CTC = env->FindClass("com/yambz/bridge/ConstructorTraceCapture");
+    if (!cls_CTC) { LOGE("ConstructorTraceCapture not found"); return 0; }
+    jmethodID mid_ctor = env->GetMethodID(cls_CTC, "<init>", "(I)V");
+    jmethodID mid_install = env->GetMethodID(cls_CTC, "install",
+        "(Ljava/lang/reflect/Constructor;I)Z");
+    if (!mid_ctor || !mid_install) { env->ExceptionClear(); return 0; }
+
+    jobject local_capture = env->NewObject(cls_CTC, mid_ctor, (jint) id);
+    if (!local_capture) return 0;
+
+    // install
+    jboolean ok = env->CallBooleanMethod(local_capture, mid_install, ctor, (jint) 500);
+    if (env->ExceptionCheck()) {
+        env->ExceptionDescribe();
+        env->ExceptionClear();
+        return 0;
+    }
+    if (!ok) {
+        env->DeleteLocalRef(local_capture);
+        return 0;
+    }
+
+    jobject global_capture = env->NewGlobalRef(local_capture);
+    jobject global_ctor = env->NewGlobalRef(ctor);
+
+    Session s;
+    s.id = id;
+    s.cfg = cfg;
+    s.callback = global_capture;
+    s.hookHandle = nullptr;  // constructor tracing uses listener, not handle
+    s.method = global_ctor;
+    s.methodDesc = cfg.methodDesc;
+    m_sessions[id] = std::move(s);
+
+    env->DeleteLocalRef(local_capture);
+    LOGI("TraceEngine: started constructor trace %u for %s",
+         id, cfg.methodDesc.c_str());
+    return id;
+}
+
 } // namespace yambz

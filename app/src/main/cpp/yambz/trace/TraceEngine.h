@@ -30,6 +30,11 @@ public:
     static TraceEngine& instance();
 
     /// بدء trace method (يُرجع sessionId أو 0)
+    /// Start tracing a Constructor (uses ConstructorTraceCapture via hookInstruction)
+    uint32_t startConstructorTrace(JNIEnv* env, jobject constructor,
+                                   const TraceSession& cfg);
+
+    /// Start tracing a Method (uses TraceCapture via Albatross.hookMethod)
     uint32_t startTrace(JNIEnv* env, jobject methodOrCtor,
                         const TraceSession& cfg);
 

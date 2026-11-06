@@ -204,7 +204,7 @@ void jni_trace_onEvent(uint32_t sessionId, JNIEnv* env,
         } else { env->ExceptionClear(); }
 
         // backtrace
-        ev.backtrace = captureBacktrace(env, 5);
+        ev.backtrace = captureBacktrace(env, 32);
 
         TraceStore::instance().push(std::move(ev));
     } else {
@@ -418,7 +418,7 @@ Java_com_yambz_bridge_ConstructorTraceCapture_nativeOnEnter(
         }
     }
 
-    ev.backtrace = captureBacktrace(env, 5);
+    ev.backtrace = captureBacktrace(env, 32);
     TraceStore::instance().push(std::move(ev));
 }
 

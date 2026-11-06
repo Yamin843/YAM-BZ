@@ -81,8 +81,14 @@ public final class MethodInvoker {
 
     public static void invokeAsync(final Member member, final Object self,
                                    final Object[] args, final Callback cb) {
+        invokeAsyncWithTimeout(member, self, args, DEFAULT_TIMEOUT_MS, cb);
+    }
+
+    public static void invokeAsyncWithTimeout(final Member member, final Object self,
+                                              final Object[] args, final long timeoutMs,
+                                              final Callback cb) {
         sCancelRequested = false;
-        Thread t = new Thread(() -> {
+        final Thread worker = new Thread(() -> {
             Result r = invoke(member, self, args);
             if (sCancelRequested) {
                 r.success = false;
@@ -90,9 +96,33 @@ public final class MethodInvoker {
             }
             if (cb != null) cb.onResult(r);
         }, "YambzInvoker");
-        t.setDaemon(true);
-        sActiveThread = t;
-        t.start();
+        worker.setDaemon(true);
+        sActiveThread = worker;
+
+        // Timeout enforcer thread
+        Thread watchdog = new Thread(() -> {
+            try {
+                worker.join(timeoutMs);
+            } catch (InterruptedException e) {
+                return;
+            }
+            if (worker.isAlive()) {
+                sCancelRequested = true;
+                worker.interrupt();
+                // send timeout result (invoke still may finish, but we don't wait)
+                Result r = new Result();
+                r.success = false;
+                r.error = new java.util.concurrent.TimeoutException(
+                    "invocation exceeded " + timeoutMs + "ms");
+                r.elapsedMs = timeoutMs;
+                r.memberDesc = String.valueOf(member);
+                if (cb != null) cb.onResult(r);
+            }
+        }, "YambzTimeout");
+        watchdog.setDaemon(true);
+
+        worker.start();
+        watchdog.start();
     }
 
     public static void cancel() {

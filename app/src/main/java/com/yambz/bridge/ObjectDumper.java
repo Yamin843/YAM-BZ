@@ -31,11 +31,17 @@ import java.util.Map;
 public final class ObjectDumper {
 
     public static final class Options {
-        public int maxDepth = 8;
-        public int maxElements = 50_000;
-        public int maxString = 4_000;
-        public int timeBudgetMs = 50;
-        public int byteBudget = 16_384;
+        // No hard limits by default. Set to specific value to bound.
+        // maxDepth = -1 → unlimited depth (cycle detection still prevents infinite loops)
+        // maxElements = -1 → unlimited elements
+        // maxString = -1 → unlimited strings
+        // timeBudgetMs = 0 → no time limit
+        // byteBudget = 0 → no byte limit
+        public int maxDepth = -1;
+        public int maxElements = -1;
+        public int maxString = -1;
+        public int timeBudgetMs = 0;
+        public int byteBudget = 0;
         public boolean showFieldTypes = false;
         public boolean includeStatic = false;
         public Options copy() {
@@ -86,20 +92,24 @@ public final class ObjectDumper {
 
     // ─── Budget tracker ───
     private static final class Budget {
-        final long deadlineNanos;
-        final int  byteLimit;
+        final long deadlineNanos;   // 0 = unlimited
+        final int  byteLimit;       // 0 = unlimited
         int        bytesWritten;
         boolean    exhausted;
         Budget(int ms, int bytes) {
-            deadlineNanos = System.nanoTime() + ms * 1_000_000L;
-            byteLimit = bytes;
+            deadlineNanos = ms > 0 ? System.nanoTime() + ms * 1_000_000L : 0L;
+            byteLimit = bytes > 0 ? bytes : 0;
         }
         boolean check() {
             if (exhausted) return false;
-            if (System.nanoTime() > deadlineNanos) { exhausted = true; return false; }
+            if (deadlineNanos > 0 && System.nanoTime() > deadlineNanos) {
+                exhausted = true;
+                return false;
+            }
             return true;
         }
         boolean write(int n) {
+            if (byteLimit == 0) return true;  // unlimited
             bytesWritten += n;
             if (bytesWritten > byteLimit) { exhausted = true; return false; }
             return true;
@@ -133,7 +143,7 @@ public final class ObjectDumper {
         if (obj instanceof String) {
             String s = (String) obj;
             sb.append('"');
-            if (s.length() > opts.maxString) {
+            if (opts.maxString >= 0 && s.length() > opts.maxString) {
                 sb.append(s, 0, opts.maxString).append("…");
             } else {
                 sb.append(s);
@@ -172,7 +182,7 @@ public final class ObjectDumper {
             return;
         }
 
-        if (depth > opts.maxDepth) {
+        if (opts.maxDepth >= 0 && depth > opts.maxDepth) {
             sb.append(cls.getSimpleName()).append('@')
               .append(Integer.toHexString(System.identityHashCode(obj)))
               .append("<max-depth>");
@@ -187,7 +197,7 @@ public final class ObjectDumper {
                 Class<?> comp = cls.getComponentType();
                 sb.append(comp.getSimpleName()).append('[').append(len).append("] {");
                 int shown = 0;
-                for (int i = 0; i < len && shown < opts.maxElements; i++, shown++) {
+                for (int i = 0; i < len && (opts.maxElements < 0 || shown < opts.maxElements); i++, shown++) {
                     if (i > 0) sb.append(", ");
                     dumpInternal(sb, Array.get(obj, i), opts, visited, depth + 1, budget);
                 }
@@ -202,7 +212,7 @@ public final class ObjectDumper {
                 sb.append(cls.getSimpleName()).append('(').append(c.size()).append(") [");
                 int shown = 0;
                 for (Object e : c) {
-                    if (shown >= opts.maxElements) {
+                    if (opts.maxElements >= 0 && shown >= opts.maxElements) {
                         sb.append(", …(").append(c.size() - shown).append(" more)");
                         break;
                     }
@@ -221,7 +231,7 @@ public final class ObjectDumper {
                 sb.append(cls.getSimpleName()).append('(').append(m.size()).append(") {");
                 int shown = 0;
                 for (Map.Entry<?, ?> e : m.entrySet()) {
-                    if (shown >= opts.maxElements) {
+                    if (opts.maxElements >= 0 && shown >= opts.maxElements) {
                         sb.append(", …(").append(m.size() - shown).append(" more)");
                         break;
                     }
