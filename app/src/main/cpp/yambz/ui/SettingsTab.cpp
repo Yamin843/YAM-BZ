@@ -204,6 +204,11 @@ namespace yambz {
 // ═══════════════════════════════════════════════════════════
 //  GLOBAL helpers (matches Helpers.h, C++ linkage, ::scope)
 // ═══════════════════════════════════════════════════════════
+
+// ===============================================================
+//  GLOBAL helpers — match Helpers.h (C++ linkage, ::scope)
+//  These call namespace accessors which reach the static g_settings
+// ===============================================================
 bool yambz_showFps() {
     return yambz::settingsShowFps();
 }
