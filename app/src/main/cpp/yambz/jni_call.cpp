@@ -225,7 +225,13 @@ Java_com_yambz_bridge_ModBootstrap_nativeInitStorage(JNIEnv* env, jclass, jstrin
     yambz::History::instance().init(base + "/yambz/history.txt");
     LOGI("Storage initialized: %s", base.c_str());
 
+/* yambz_notify removed - re-added at end of file */
+}
+
+// ═══════════════════════════════════════════════════════════
+//  yambz_notify — file-scope helper
+//  (do NOT insert this before any closing brace)
+// ═══════════════════════════════════════════════════════════
 void yambz_notify(const char* msg) {
     if (msg) yambz::Notifications::instance().push(msg, 2.5f);
-}
 }

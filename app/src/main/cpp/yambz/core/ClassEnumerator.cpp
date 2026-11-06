@@ -231,7 +231,10 @@ const std::vector<MemberInfo>& ClassEnumerator::membersOf(size_t classIdx) {
         std::string className;
         {
             std::lock_guard<std::mutex> lk(m_mu);
-            if (classIdx >= m_classes.size()) return result;
+            if (classIdx >= m_classes.size()) {
+            static const std::vector<MemberInfo> empty;
+            return empty;
+        }
             className = m_classes[classIdx].fullName;
         }
 
