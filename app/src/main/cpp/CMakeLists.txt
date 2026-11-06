@@ -72,10 +72,14 @@ target_link_libraries(yambz
 target_link_options(yambz PRIVATE -Wl,-z,max-page-size=16384)
 target_link_options(yambz PRIVATE -Wl,--no-undefined)
 target_link_options(yambz PRIVATE -Wl,--exclude-libs,ALL)
+target_link_options(yambz PRIVATE -Wl,-s -Wl,--gc-sections)
 
-# Size optimizations
+# Size optimizations — NO -g, strip symbols
 target_compile_options(yambz PRIVATE
     $<$<CONFIG:Release>:-Os>
     -fvisibility=hidden
     -fvisibility-inlines-hidden
 )
+# Explicitly remove debug info (in case defaults add it)
+target_compile_options(yambz PRIVATE -g0)
+

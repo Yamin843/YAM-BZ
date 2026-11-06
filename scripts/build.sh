@@ -116,7 +116,21 @@ echo "  ✅ dex embedded"
 
 # ═══ 4. Embed albatross .so ═══
 echo "▶ 4/5 Embedding libalbatross_base.so..."
-ALB_SO="$ROOT/albatross-libs/jniLibs/$ABI/libalbatross_base.so"
+ALB_SO_SRC="$ROOT/albatross-libs/jniLibs/$ABI/libalbatross_base.so"
+ALB_SO="$BUILD_DIR/stripped_libalbatross.so"
+
+# Strip debug symbols from albatross before embedding
+# This saves ~2MB (albatross ships with debug info)
+LLVM_STRIP="$NDK/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-strip"
+if [ -x "$LLVM_STRIP" ]; then
+    cp "$ALB_SO_SRC" "$ALB_SO"
+    "$LLVM_STRIP" --strip-all "$ALB_SO" 2>/dev/null || \
+    "$LLVM_STRIP" "$ALB_SO" 2>/dev/null || true
+    echo "  stripped: $(stat -c %s "$ALB_SO_SRC") → $(stat -c %s "$ALB_SO") bytes"
+else
+    cp "$ALB_SO_SRC" "$ALB_SO"
+    echo "  (llvm-strip not found — no strip)"
+fi
 cat > "$ROOT/app/src/main/cpp/yambz/embed/embedded_albatross.h" << 'HDR'
 #pragma once
 #include <cstddef>
