@@ -7,6 +7,7 @@
 #include <string>
 
 #include <jni.h>
+#include "core/Helpers.h"
 
 namespace yambz {
 
@@ -28,7 +29,7 @@ static NativeUIState s_state;
 
 // JNI helpers
 static void loadLibs() {
-    extern JavaVM* yambz_getGlobalVM();
+
     JavaVM* vm = yambz_getGlobalVM();
     if (!vm) return;
     JNIEnv* env = nullptr;
@@ -54,7 +55,7 @@ static void loadLibs() {
 }
 
 static void loadSymbols(const std::string& lib) {
-    extern JavaVM* yambz_getGlobalVM();
+
     JavaVM* vm = yambz_getGlobalVM();
     if (!vm) return;
     JNIEnv* env = nullptr;

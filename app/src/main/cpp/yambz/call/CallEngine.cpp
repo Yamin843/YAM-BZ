@@ -10,6 +10,7 @@
 #include <string>
 
 #include <jni.h>
+#include "core/Helpers.h"
 
 namespace yambz {
 
@@ -19,7 +20,7 @@ CallEngine& CallEngine::instance() {
 }
 
 static JavaVM* getVM() {
-    extern JavaVM* yambz_getGlobalVM();
+
     return yambz_getGlobalVM();
 }
 

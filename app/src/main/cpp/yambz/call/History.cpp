@@ -4,6 +4,7 @@
 #include <chrono>
 #include <sstream>
 #include <mutex>
+#include "core/Helpers.h"
 
 namespace yambz {
 

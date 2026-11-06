@@ -2,6 +2,7 @@
 #include "call/TracePresets.h"
 #include "core/ErrorContext.h"
 #include "core/Logger.h"
+#include "core/Helpers.h"
 
 using namespace yambz;
 
@@ -71,7 +72,7 @@ Java_com_yambz_bridge_ModBootstrap_nativeSetCacheDir(JNIEnv* env, jclass, jstrin
     if (!dir) return;
     const char* c = env->GetStringUTFChars(dir, nullptr);
     if (c) {
-        extern void yambz_setCacheDir(const char*);
+
         yambz_setCacheDir(c);
         env->ReleaseStringUTFChars(dir, c);
     }

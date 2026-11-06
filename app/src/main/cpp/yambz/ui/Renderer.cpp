@@ -15,6 +15,7 @@
 #include <chrono>
 #include <cmath>
 #include <mutex>
+#include "core/Helpers.h"
 
 namespace yambz {
 
@@ -118,7 +119,7 @@ void Renderer::onDrawFrame(int w, int h) {
     MainWindow::instance().draw();
 
     // FPS counter (اختياري)
-    extern bool yambz_showFps();
+
     if (yambz_showFps()) {
         ImGui::SetNextWindowPos(ImVec2(10, 10), ImGuiCond_Always);
         ImGui::SetNextWindowBgAlpha(0.7f);

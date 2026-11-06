@@ -3,6 +3,7 @@
 #include "../core/Logger.h"
 #include <mutex>
 #include <algorithm>
+#include "core/Helpers.h"
 
 namespace yambz {
 

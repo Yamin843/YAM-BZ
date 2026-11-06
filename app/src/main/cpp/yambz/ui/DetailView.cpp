@@ -3,6 +3,7 @@
 #include "../core/ClassEnumerator.h"
 #include <imgui.h>
 #include "core/ClassTypes.h"
+#include "core/Helpers.h"
 
 namespace yambz {
 

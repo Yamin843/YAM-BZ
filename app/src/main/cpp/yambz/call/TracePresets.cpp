@@ -8,6 +8,7 @@
 #include <dirent.h>
 #include <cstdio>
 #include <mutex>
+#include "core/Helpers.h"
 
 namespace yambz {
 

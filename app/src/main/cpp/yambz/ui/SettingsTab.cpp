@@ -9,6 +9,7 @@
 #include <cstdio>
 #include <fstream>
 #include <string>
+#include "core/Helpers.h"
 
 namespace yambz {
 
@@ -49,7 +50,7 @@ SettingsTab& SettingsTab::instance() {
 }
 
 static std::string settingsPath() {
-    extern std::string yambz_getCacheDir();
+
     return yambz_getCacheDir() + "/yambz" + kSettingsFile;
 }
 
@@ -157,7 +158,7 @@ void SettingsTab::draw() {
     if (ImGui::Checkbox("##auto", &g_settings.autoStartEnum)) changed = true;
 
     Theme::drawSectionHeader("Storage");
-    extern std::string yambz_getCacheDir();
+
     ImGui::Text("Cache dir: %s", yambz_getCacheDir().c_str());
 
     Theme::drawSectionHeader("About");
@@ -170,7 +171,7 @@ void SettingsTab::draw() {
     ImGui::Spacing();
     if (ImGui::Button("Save settings", ImVec2(200, 0))) {
         save();
-        extern void yambz_notify(const char* msg);
+
         yambz_notify("Settings saved");
     }
     ImGui::SameLine();
@@ -190,22 +191,22 @@ void SettingsTab::draw() {
 // ═══════════════════════════════════════════════════════════
 //  Extern C helpers (outside namespace — explicit qualification)
 // ═══════════════════════════════════════════════════════════
-extern "C" bool yambz_showFps() {
+bool yambz_showFps() {
     // Access via public getter — no direct namespace access
     // (g_settings is static inside namespace yambz, not visible here)
     // Use an exported accessor pattern: declare friend or getter below
     // For simplicity: return from a static function defined inside namespace
-    extern bool yambz_settings_showFps();
+
     return yambz_settings_showFps();
 }
 
-extern "C" int yambz_getBacktraceDepth() {
-    extern int yambz_settings_backtraceDepth();
+int yambz_getBacktraceDepth() {
+
     return yambz_settings_backtraceDepth();
 }
 
-extern "C" int yambz_getObjectDumpDepth() {
-    extern int yambz_settings_objectDumpDepth();
+int yambz_getObjectDumpDepth() {
+
     return yambz_settings_objectDumpDepth();
 }
 

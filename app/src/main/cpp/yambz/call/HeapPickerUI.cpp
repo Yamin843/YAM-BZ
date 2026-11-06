@@ -6,6 +6,7 @@
 #include <imgui.h>
 #include <imgui_internal.h>
 #include <cstring>
+#include "core/Helpers.h"
 
 namespace yambz {
 
@@ -69,7 +70,7 @@ void drawHeapPicker() {
         ImGui::Text("Selected: #%d", ui.selectedIdx);
         ImGui::SameLine();
         if (ImGui::Button("Use instance")) {
-            extern void yambz_useInstanceFromPicker(int idx);
+
             yambz_useInstanceFromPicker(ui.selectedIdx);
             ui.show = false;
         }

@@ -6,6 +6,7 @@
 #include <sys/stat.h>
 #include <chrono>
 #include <mutex>
+#include "core/Helpers.h"
 
 namespace yambz {
 

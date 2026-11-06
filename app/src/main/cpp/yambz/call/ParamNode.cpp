@@ -3,6 +3,7 @@
 #include <cstdio>
 #include <string>
 #include <memory>
+#include "core/Helpers.h"
 
 namespace yambz {
 

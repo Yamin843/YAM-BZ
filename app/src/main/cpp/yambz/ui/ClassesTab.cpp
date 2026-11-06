@@ -17,6 +17,7 @@
 
 #include <jni.h>
 #include "core/ClassTypes.h"
+#include "core/Helpers.h"
 
 namespace yambz {
 
@@ -119,17 +120,17 @@ static void drawClassRow(const ClassInfo& c, uint32_t idx) {
     if (g_tab.hoveredIdx == idx) {
         ImGui::SameLine(ImGui::GetWindowWidth() - 260);
         if (ImGui::SmallButton("Trace")) {
-            extern void yambz_openTraceForClass(uint32_t);
+
             yambz_openTraceForClass(idx);
         }
         ImGui::SameLine(0, 6);
         if (ImGui::SmallButton("Call")) {
-            extern void yambz_openCallFor(uint32_t);
+
             yambz_openCallFor(idx);
         }
         ImGui::SameLine(0, 6);
         if (ImGui::SmallButton("Info")) {
-            extern void yambz_openDetail(uint32_t);
+
             yambz_openDetail(idx);
         }
     }
@@ -233,7 +234,7 @@ void ClassesTab::draw() {
             // نطلب من C++ البدء — من نفس الـ thread عبر JNI من PanelBridge
             // (نتجاوز: نستخدم PanelBridge class methods)
             // الطريقة الأنظف: ندعو من Java. لكن للتبسيط، نستخدم helper:
-            extern void yambz_startEnumFromUI();
+
             yambz_startEnumFromUI();
         }
     }
@@ -308,7 +309,7 @@ extern void yambz_startEnumFromUI() {
     JNIEnv* env = nullptr;
     // (يفترض أن JNI_OnLoad قد حفظ g_vm في مكان ما — سنستخدم وظيفة مساعدة)
     // البديل: نطلب من C++ تخزين VM statically
-    extern JavaVM* yambz_getGlobalVM();
+
     vm = yambz_getGlobalVM();
     if (!vm) return;
     if (vm->GetEnv((void**)&env, JNI_VERSION_1_6) != JNI_OK) {

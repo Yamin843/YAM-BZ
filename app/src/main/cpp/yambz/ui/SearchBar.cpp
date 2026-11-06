@@ -4,6 +4,7 @@
 #include <imgui.h>
 #include <cstring>
 #include <chrono>
+#include "core/Helpers.h"
 
 namespace yambz {
 

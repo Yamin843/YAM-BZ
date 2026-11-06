@@ -17,6 +17,7 @@
 #include <cstring>
 
 #include <jni.h>
+#include "core/Helpers.h"
 
 namespace yambz {
 
@@ -51,7 +52,7 @@ static int64_t nowMs() {
 }
 
 static void copyToClipboard(const std::string& text) {
-    extern JavaVM* yambz_getGlobalVM();
+
     JavaVM* vm = yambz_getGlobalVM();
     if (!vm) return;
     JNIEnv* env = nullptr;
@@ -129,7 +130,7 @@ void TraceDialog::draw() {
 
     // ─── action buttons ───
     if (ImGui::Button("Stop")) {
-        extern void yambz_stopTrace();
+
         yambz_stopTrace();
     }
     ImGui::SameLine();
@@ -155,7 +156,7 @@ void TraceDialog::draw() {
         static char s_name[128] = {0};
         ImGui::InputText("Name", s_name, sizeof s_name);
         if (ImGui::Button("Save") && s_name[0]) {
-            extern void yambz_saveTracePreset(const char* name);
+
             yambz_saveTracePreset(s_name);
             s_name[0] = 0;
             ImGui::CloseCurrentPopup();
@@ -170,7 +171,7 @@ void TraceDialog::draw() {
         } else {
             for (const auto& p : presets) {
                 if (ImGui::Selectable(p.name.c_str())) {
-                    extern void yambz_loadTracePreset(const char* name);
+
                     yambz_loadTracePreset(p.name.c_str());
                     ImGui::CloseCurrentPopup();
                 }
@@ -182,7 +183,7 @@ void TraceDialog::draw() {
     // ─── deep backtrace toggle ───
     if (ImGui::Checkbox("Deep backtrace (Stalker)", &s_deepBacktrace)) {
         if (s_deepBacktrace) {
-            extern void yambz_startDeepBacktrace(int ms, int max);
+
             yambz_startDeepBacktrace(2000, 500);
             Notifications::instance().push("DeepBacktrace: collecting for 2s...", 2.0f);
         }

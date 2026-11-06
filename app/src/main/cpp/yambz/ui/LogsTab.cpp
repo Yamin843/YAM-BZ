@@ -10,6 +10,7 @@
 #include <cstring>
 #include <cstdio>
 #include <sys/stat.h>
+#include "core/Helpers.h"
 
 namespace yambz {
 
@@ -138,10 +139,10 @@ void LogsTab::draw() {
     ImGui::SameLine();
     if (ImGui::Button("Export")) {
         // حفظ إلى cache
-        extern std::string yambz_getCacheDir();
+
         std::string path = yambz_getCacheDir() + "/yambz/logs_export.txt";
         exportLogs(path);
-        extern void yambz_notify(const char* msg);
+
         yambz_notify(("Exported to: " + path).c_str());
     }
 

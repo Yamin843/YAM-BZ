@@ -2,6 +2,7 @@
 #include <android/log.h>
 #include "trace/DeepBacktrace.h"
 #include "core/Logger.h"
+#include "core/Helpers.h"
 
 using namespace yambz;
 
@@ -24,7 +25,7 @@ Java_com_yambz_bridge_DeepBacktrace_nativeOnComplete(JNIEnv* env, jclass, jstrin
 // ربط مع PanelBridge: بدء جمع
 extern "C" JNIEXPORT jboolean JNICALL
 Java_com_yambz_bridge_PanelBridge_nativeStartDeepBacktrace(JNIEnv*, jclass, jint durationMs, jint maxFrames) {
-    extern JavaVM* yambz_getGlobalVM();
+
     JavaVM* vm = yambz_getGlobalVM();
     if (!vm) return JNI_FALSE;
     JNIEnv* env = nullptr;

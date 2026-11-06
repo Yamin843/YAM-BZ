@@ -2,6 +2,7 @@
 #include <vector>
 #include "../core/Logger.h"
 #include <mutex>
+#include "core/Helpers.h"
 
 namespace yambz {
 

@@ -7,12 +7,12 @@
 #include "ui/PanelManager.h"
 #include "ui/Notifications.h"
 #include "core/Logger.h"
+#include "core/Helpers.h"
 
 using namespace yambz;
 
 // forward declarations of init helpers
-extern void fab_setJavaVM(JavaVM* vm);
-extern void panel_setJavaVM(JavaVM* vm);
+
 
 // ═══════════════════════════════════════════════════════════
 //  ModManager — lifecycle

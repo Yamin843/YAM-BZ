@@ -16,6 +16,7 @@
 #include <mutex>
 #include <atomic>
 #include <algorithm>
+#include "core/Helpers.h"
 
 namespace yambz {
 

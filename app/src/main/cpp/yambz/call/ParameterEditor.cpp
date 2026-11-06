@@ -6,6 +6,7 @@
 #include <cstring>
 #include <string>
 #include <memory>
+#include "core/Helpers.h"
 
 namespace yambz {
 
@@ -130,7 +131,7 @@ bool ParameterEditor::draw(const char* label, std::shared_ptr<ParamNode>& node,
             ImGui::TextDisabled("construction");
             ImGui::SameLine();
             if (ImGui::SmallButton("Find on heap")) {
-                extern void yambz_openHeapPicker(const char* type);
+
                 yambz_openHeapPicker(node->classType.c_str());
             }
             ImGui::SameLine();

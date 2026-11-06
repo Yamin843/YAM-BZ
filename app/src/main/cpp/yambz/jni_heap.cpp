@@ -1,6 +1,7 @@
 #include <jni.h>
 #include "call/HeapPicker.h"
 #include "core/Logger.h"
+#include "core/Helpers.h"
 
 using namespace yambz;
 

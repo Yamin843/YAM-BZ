@@ -8,6 +8,7 @@
 #include <cstring>
 #include <atomic>
 #include <mutex>
+#include "core/Helpers.h"
 
 namespace yambz {
 

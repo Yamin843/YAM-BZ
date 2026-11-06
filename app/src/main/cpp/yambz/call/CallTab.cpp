@@ -12,6 +12,7 @@
 #include <cstring>
 
 #include <jni.h>
+#include "core/Helpers.h"
 
 namespace yambz {
 
@@ -54,7 +55,7 @@ void CallTab::draw() {
         ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.20f, 0.35f, 0.20f, 1.0f));
         ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.30f, 0.50f, 0.30f, 1.0f));
         if (ImGui::Button("▶ Invoke", ImVec2(120, 0))) {
-            extern void yambz_doInvoke();
+
             yambz_doInvoke();
         }
         ImGui::PopStyleColor(2);
@@ -97,7 +98,7 @@ void CallTab::draw() {
 
     // poll result every frame (سريع — نستخدم JSON)
     if (!running) {
-        extern std::string yambz_getLastResultJson();
+
         std::string json = yambz_getLastResultJson();
         if (!json.empty() && json != "{}") {
             st.lastResultJson = json;
@@ -120,7 +121,6 @@ void yambz_doInvoke() {
     auto& st = callUI();
     if (!st.target.method) return;
 
-    extern JavaVM* yambz_getGlobalVM();
     JavaVM* vm = yambz_getGlobalVM();
     if (!vm) return;
     JNIEnv* env = nullptr;
@@ -161,7 +161,7 @@ void yambz_doInvoke() {
 
 // helper for CallTab to poll result
 std::string yambz_getLastResultJson() {
-    extern std::string yambz_callEngineLastResultJson();
+
     return yambz_callEngineLastResultJson();
 }
 

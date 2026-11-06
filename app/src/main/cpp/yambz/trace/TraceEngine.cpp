@@ -5,6 +5,7 @@
 #include <mutex>
 
 #include <jni.h>
+#include "core/Helpers.h"
 
 namespace yambz {
 

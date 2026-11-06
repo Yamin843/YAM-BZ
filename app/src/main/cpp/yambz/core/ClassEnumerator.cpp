@@ -10,6 +10,7 @@
 
 #include <jni.h>
 #include "core/ClassTypes.h"
+#include "core/Helpers.h"
 
 namespace yambz {
 

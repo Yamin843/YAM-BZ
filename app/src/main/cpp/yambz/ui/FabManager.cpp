@@ -6,6 +6,7 @@
 #include <mutex>
 
 #include <jni.h>
+#include "core/Helpers.h"
 
 namespace yambz {
 
@@ -126,3 +127,9 @@ void FabManager::onFabTapped() {
 }
 
 } // namespace yambz
+
+
+// GLOBAL WRAPPER for global callers
+void fab_setJavaVM(JavaVM* vm) {
+    yambz::fab_setJavaVM(vm);
+}

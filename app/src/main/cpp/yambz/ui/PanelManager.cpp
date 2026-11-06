@@ -5,6 +5,7 @@
 #include <mutex>
 
 #include <jni.h>
+#include "core/Helpers.h"
 
 namespace yambz {
 
@@ -124,3 +125,9 @@ void PanelManager::hide() {
 }
 
 } // namespace yambz
+
+
+// GLOBAL WRAPPER for global callers
+void panel_setJavaVM(JavaVM* vm) {
+    yambz::panel_setJavaVM(vm);
+}

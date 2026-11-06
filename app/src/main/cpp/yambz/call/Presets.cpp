@@ -8,6 +8,7 @@
 #include <sstream>
 #include <chrono>
 #include <mutex>
+#include "core/Helpers.h"
 
 namespace yambz {
 

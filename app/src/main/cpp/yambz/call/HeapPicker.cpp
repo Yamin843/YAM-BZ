@@ -8,6 +8,7 @@
 #include <vector>
 #include <algorithm>
 #include <memory>
+#include "core/Helpers.h"
 
 namespace yambz {
 
@@ -27,7 +28,7 @@ HeapPicker::HeapPicker() : m_state(std::make_unique<State>()) {}
 HeapPicker::~HeapPicker() = default;
 
 static JavaVM* getVM() {
-    extern JavaVM* yambz_getGlobalVM();
+
     return yambz_getGlobalVM();
 }
 

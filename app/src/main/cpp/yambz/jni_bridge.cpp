@@ -1,6 +1,7 @@
 #include <jni.h>
 #include <android/log.h>
 #include "embedded_loader.h"
+#include "core/Helpers.h"
 
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO,  "YAMBZ", __VA_ARGS__)
 #define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, "YAMBZ", __VA_ARGS__)

@@ -2,6 +2,7 @@
 #include "../core/Logger.h"
 
 #include <jni.h>
+#include "core/Helpers.h"
 
 namespace yambz {
 

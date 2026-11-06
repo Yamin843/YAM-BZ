@@ -3,6 +3,7 @@
 #include <imgui.h>
 #include <mutex>
 #include <chrono>
+#include "core/Helpers.h"
 
 namespace yambz {
 

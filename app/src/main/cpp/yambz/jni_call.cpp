@@ -5,6 +5,7 @@
 #include "call/ParamNode.h"
 #include "call/CallEngine.h"
 #include "core/Logger.h"
+#include "core/Helpers.h"
 
 using namespace yambz;
 
@@ -26,9 +27,6 @@ Java_com_yambz_bridge_CallBridge_nativeInvoke(
     // بإعادة التصميم: نُوسّع CallEngine ليأخذ JSON مباشرة
 
     // هذا التنفيذ المبسّط يستخدم CallEngine.invokeAsyncRaw (سنضيفها)
-    extern bool yambz_invokeRaw(JNIEnv*, jobject method, const std::string& desc,
-                                const std::string& thisJson,
-                                const std::vector<std::string>& argsJson);
 
     std::vector<std::string> args;
     if (argsJson) {
@@ -56,28 +54,27 @@ bool yambz_invokeRaw(JNIEnv* callerEnv, jobject method,
                                  const std::string& thisJson,
                                  const std::vector<std::string>& argsJson) {
     // نُعيد استخدام CallEngine لكن بمسار مختلف
-    extern void yambz_callEngineInvokeRaw(JNIEnv*, jobject, const std::string&,
-                                           const std::string&, const std::vector<std::string>&);
+
     yambz_callEngineInvokeRaw(callerEnv, method, methodDesc, thisJson, argsJson);
     return true;
 }
 
 extern "C" JNIEXPORT jboolean JNICALL
 Java_com_yambz_bridge_CallBridge_nativeIsRunning(JNIEnv*, jclass) {
-    extern bool yambz_callEngineIsRunning();
+
     return yambz_callEngineIsRunning() ? JNI_TRUE : JNI_FALSE;
 }
 
 extern "C" JNIEXPORT jstring JNICALL
 Java_com_yambz_bridge_CallBridge_nativeLastResultJson(JNIEnv* env, jclass) {
-    extern std::string yambz_callEngineLastResultJson();
+
     std::string j = yambz_callEngineLastResultJson();
     return env->NewStringUTF(j.c_str());
 }
 
 extern "C" JNIEXPORT void JNICALL
 Java_com_yambz_bridge_CallBridge_nativeClear(JNIEnv*, jclass) {
-    extern void yambz_callEngineClear();
+
     yambz_callEngineClear();
 }
 
@@ -90,7 +87,6 @@ void yambz_openCallFor(uint32_t classIdx) {
     const auto& c = (*classes)[classIdx];
     const auto& members = yambz::ClassEnumerator::instance().membersOf(classIdx);
 
-    extern JavaVM* yambz_getGlobalVM();
     JavaVM* vm = yambz_getGlobalVM();
     if (!vm) return;
     JNIEnv* env = nullptr;
@@ -158,7 +154,7 @@ void yambz_useInstanceFromPicker(int idx) {
     if (!ref) return;
 
     // احصل على الوصف
-    extern JavaVM* yambz_getGlobalVM();
+
     JavaVM* vm = yambz_getGlobalVM();
     if (!vm) return;
     JNIEnv* env = nullptr;

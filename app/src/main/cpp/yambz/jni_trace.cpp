@@ -12,6 +12,7 @@
 #include "core/ClassEnumerator.h"
 #include "core/ClassTypes.h"
 #include "trace/TraceUI.h"
+#include "core/Helpers.h"
 
 using namespace yambz;
 
@@ -142,7 +143,7 @@ static ParamValue extractParam(JNIEnv* env, jobject frame, int i, jobject rawArg
 // ═══════════════════════════════════════════════════════════
 //  Called from TraceEngine::onEventCaptured
 // ═══════════════════════════════════════════════════════════
-extern "C" void jni_trace_onEvent(uint32_t sessionId, JNIEnv* env,
+void jni_trace_onEvent(uint32_t sessionId, JNIEnv* env,
                                    jobject frame, bool isBefore) {
     if (!env || !frame) return;
 
@@ -299,7 +300,7 @@ void yambz_openTraceForClass(uint32_t classIdx) {
             // عبر ClassBridge (Java)
             JavaVM* vm = nullptr;
             // (يُملأ من init)
-            extern JavaVM* yambz_getGlobalVM();
+
             vm = yambz_getGlobalVM();
             if (!vm) return;
             JNIEnv* env = nullptr;
@@ -361,7 +362,7 @@ void yambz_openTraceForClass(uint32_t classIdx) {
 }
 
 void yambz_stopTrace() {
-    extern JavaVM* yambz_getGlobalVM();
+
     JavaVM* vm = yambz_getGlobalVM();
     if (!vm) return;
     JNIEnv* env = nullptr;
@@ -476,13 +477,13 @@ void yambz_saveTracePreset(const char* name) {
 void yambz_loadTracePreset(const char* name) {
     yambz::TracePreset p;
     if (yambz::TracePresets::instance().load(name, p)) {
-        extern void yambz_notify(const char*);
+
         yambz_notify(("Loaded preset: " + p.name).c_str());
     }
 }
 
 void yambz_startDeepBacktrace(int ms, int max) {
-    extern JavaVM* yambz_getGlobalVM();
+
     JavaVM* vm = yambz_getGlobalVM();
     if (!vm) return;
     JNIEnv* env = nullptr;

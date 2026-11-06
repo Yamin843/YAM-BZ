@@ -4,6 +4,7 @@
 #include "core/SearchEngine.h"
 #include "ui/ClassesState.h"
 #include "core/Logger.h"
+#include "core/Helpers.h"
 
 using namespace yambz;
 
