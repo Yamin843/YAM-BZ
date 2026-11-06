@@ -2,21 +2,21 @@ package com.yambz.bridge;
 
 import android.util.Log;
 
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Member;
 
+import qing.albatross.core.Albatross;
 import qing.albatross.core.InstructionListener;
 import qing.albatross.core.InvocationContext;
 
 /**
- * يستقبل enter/exit لـ constructor عبر Albatross.hookInstruction.
+ * ConstructorTraceCapture: كامل باستخدام Albatross.hookInstruction.
  *
- * لماذا؟
- *   - Albatross.hookMethod يرفض constructors
- *   - hookInstruction يعمل على أي Member (method أو constructor)
+ * يلتقط:
+ * - onEnter (dexPc=0): هذا الكائن لم يُنشأ بعد (self=null), args متاحة
+ * - onReturn: الكائن المُنشأ (ret) + args
  *
- * التدفق:
- *   onEnter: self=null (كائن لم يُنشأ بعد) + args
- *   onReturn: ret=الكائن المُنشأ + args
+ * يُستخدم من TraceEngine عند trace constructor.
  */
 public class ConstructorTraceCapture extends InstructionListener {
     private static final String TAG = "YAMBZ";
@@ -28,7 +28,28 @@ public class ConstructorTraceCapture extends InstructionListener {
     private final int sessionId;
 
     public ConstructorTraceCapture(int sessionId) {
+        super(false);  // traceReturn = false (سنتعامل مع onReturn يدوياً)
         this.sessionId = sessionId;
+    }
+
+    /**
+     * تثبيت المراقب على constructor معيّن.
+     * @return id للاستخدام في unHook (0 إذا فشل)
+     */
+    public long install(Constructor<?> ctor, int maxDexPc) {
+        try {
+            boolean ok = Albatross.hookInstruction(
+                ctor, 0, maxDexPc, this);
+            if (!ok) {
+                Log.e(TAG, "hookInstruction failed for " + ctor);
+                return 0;
+            }
+            // listenerId يُعيَّن داخلياً بواسطة Albatross
+            return this.listenerId;
+        } catch (Throwable t) {
+            Log.e(TAG, "install failed", t);
+            return 0;
+        }
     }
 
     @Override
@@ -36,7 +57,7 @@ public class ConstructorTraceCapture extends InstructionListener {
         try {
             nativeOnEnter(sessionId, method, dexPc, ctx);
         } catch (Throwable t) {
-            Log.e(TAG, "ctor onEnter", t);
+            Log.e(TAG, "onEnter failed", t);
         }
     }
 
@@ -45,7 +66,7 @@ public class ConstructorTraceCapture extends InstructionListener {
         try {
             nativeOnReturn(sessionId, method, ret, dexPc, ctx);
         } catch (Throwable t) {
-            Log.e(TAG, "ctor onReturn", t);
+            Log.e(TAG, "onReturn failed", t);
         }
     }
 

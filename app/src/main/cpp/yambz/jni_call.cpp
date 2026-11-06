@@ -1,32 +1,31 @@
 #include <jni.h>
+#include <string>
 #include <vector>
 #include <cstring>
-#include <android/log.h>
-#include "call/ParamNode.h"
-#include "call/CallEngine.h"
-#include "core/Logger.h"
+
 #include "core/Helpers.h"
+#include "core/Logger.h"
+#include "call/CallState.h"
+#include "call/HeapPicker.h"
+#include "call/HeapPickerUI.h"
+#include "call/Presets.h"
+#include "call/History.h"
+#include "ui/Notifications.h"
 
 using namespace yambz;
 
+// ═══════════════════════════════════════════════════════════
+//  CallBridge JNI
+// ═══════════════════════════════════════════════════════════
 extern "C" JNIEXPORT jboolean JNICALL
 Java_com_yambz_bridge_CallBridge_nativeInvoke(
     JNIEnv* env, jclass,
     jobject method, jstring methodDesc,
     jstring thisJson, jobjectArray argsJson)
 {
-    CallSpec spec;
-    spec.methodMember = method;
-
     const char* md = env->GetStringUTFChars(methodDesc, nullptr);
-    spec.methodDesc = md ? md : "";
+    std::string desc = md ? md : "";
     if (md) env->ReleaseStringUTFChars(methodDesc, md);
-
-    // this (نُمرّره JSON مباشرة — نبني ParamNode من JSON ليس ضرورياً)
-    // لكن CallEngine يحتاج ParamNode... للتبسيط، سنمرّر JSON خاماً
-    // بإعادة التصميم: نُوسّع CallEngine ليأخذ JSON مباشرة
-
-    // هذا التنفيذ المبسّط يستخدم CallEngine.invokeAsyncRaw (سنضيفها)
 
     std::vector<std::string> args;
     if (argsJson) {
@@ -45,47 +44,73 @@ Java_com_yambz_bridge_CallBridge_nativeInvoke(
     std::string thisStr = tj ? tj : "";
     if (tj) env->ReleaseStringUTFChars(thisJson, tj);
 
-    return yambz_callEngineInvokeRaw(env, method, spec.methodDesc, thisStr, args) ? JNI_TRUE : JNI_FALSE;
-}
-
-// يُنفذ الاستدعاء بنفس منطق CallEngine لكن من JSON خام
-bool yambz_invokeRaw(JNIEnv* callerEnv, jobject method,
-                                 const std::string& methodDesc,
-                                 const std::string& thisJson,
-                                 const std::vector<std::string>& argsJson) {
-    // نُعيد استخدام CallEngine لكن بمسار مختلف
-
-    yambz_callEngineInvokeRaw(callerEnv, method, methodDesc, thisJson, argsJson);
-    return true;
+    bool ok = yambz_callEngineInvokeRaw(env, method, desc, thisStr, args);
+    return ok ? JNI_TRUE : JNI_FALSE;
 }
 
 extern "C" JNIEXPORT jboolean JNICALL
 Java_com_yambz_bridge_CallBridge_nativeIsRunning(JNIEnv*, jclass) {
-
     return yambz_callEngineIsRunning() ? JNI_TRUE : JNI_FALSE;
 }
 
 extern "C" JNIEXPORT jstring JNICALL
 Java_com_yambz_bridge_CallBridge_nativeLastResultJson(JNIEnv* env, jclass) {
-
     std::string j = yambz_callEngineLastResultJson();
     return env->NewStringUTF(j.c_str());
 }
 
 extern "C" JNIEXPORT void JNICALL
 Java_com_yambz_bridge_CallBridge_nativeClear(JNIEnv*, jclass) {
-
     yambz_callEngineClear();
 }
 
-#include "call/CallState.h"
-#include "core/ClassEnumerator.h"
+// ═══════════════════════════════════════════════════════════
+//  Presets JNI
+// ═══════════════════════════════════════════════════════════
+extern "C" JNIEXPORT jboolean JNICALL
+Java_com_yambz_bridge_CallBridge_nativeSavePreset(
+    JNIEnv* env, jclass, jstring methodDesc, jstring name, jstring json)
+{
+    auto toStr = [&](jstring js) -> std::string {
+        if (!js) return "";
+        const char* c = env->GetStringUTFChars(js, nullptr);
+        std::string r = c ? c : "";
+        env->ReleaseStringUTFChars(js, c);
+        return r;
+    };
+    return Presets::instance().save(toStr(methodDesc), toStr(name), toStr(json))
+        ? JNI_TRUE : JNI_FALSE;
+}
 
-void yambz_openCallFor(uint32_t classIdx) {
-    auto classes = yambz::ClassEnumerator::instance().snapshot();
+extern "C" JNIEXPORT jobjectArray JNICALL
+Java_com_yambz_bridge_CallBridge_nativeListPresets(
+    JNIEnv* env, jclass, jstring methodDesc)
+{
+    const char* c = env->GetStringUTFChars(methodDesc, nullptr);
+    auto list = Presets::instance().listFor(c ? c : "");
+    env->ReleaseStringUTFChars(methodDesc, c);
+    jclass cls_Str = env->FindClass("java/lang/String");
+    jobjectArray out = env->NewObjectArray((jsize)list.size(), cls_Str, nullptr);
+    for (size_t i = 0; i < list.size(); i++) {
+        jstring js = env->NewStringUTF(list[i].name.c_str());
+        env->SetObjectArrayElement(out, (jsize)i, js);
+        env->DeleteLocalRef(js);
+    }
+    return out;
+}
+
+// ═══════════════════════════════════════════════════════════
+//  Helpers (definitions for Helpers.h)
+// ═══════════════════════════════════════════════════════════
+void yambz_notify(const char* msg) {
+    if (msg) Notifications::instance().push(msg, 2.5f);
+}
+
+void yambz_openCallFor(unsigned int classIdx) {
+    auto classes = ClassEnumerator::instance().snapshot();
     if (!classes || classIdx >= classes->size()) return;
     const auto& c = (*classes)[classIdx];
-    const auto& members = yambz::ClassEnumerator::instance().membersOf(classIdx);
+    const auto& members = ClassEnumerator::instance().membersOf(classIdx);
 
     JavaVM* vm = yambz_getGlobalVM();
     if (!vm) return;
@@ -93,7 +118,6 @@ void yambz_openCallFor(uint32_t classIdx) {
     if (vm->GetEnv((void**)&env, JNI_VERSION_1_6) != JNI_OK)
         vm->AttachCurrentThread(&env, nullptr);
 
-    // اعثر على أول Method في الكلاس
     jclass cls_Class = env->FindClass("java/lang/Class");
     jmethodID mid_forName = env->GetStaticMethodID(cls_Class, "forName",
         "(Ljava/lang/String;)Ljava/lang/Class;");
@@ -115,7 +139,7 @@ void yambz_openCallFor(uint32_t classIdx) {
             const char* name = env->GetStringUTFChars(jname, nullptr);
             bool match = false;
             for (const auto& m : members) {
-                if (m.kind == yambz::MemberKind::Method && name && m.name == name) {
+                if (m.kind == MemberKind::Method && name && m.name == name) {
                     match = true; break;
                 }
             }
@@ -123,7 +147,7 @@ void yambz_openCallFor(uint32_t classIdx) {
             env->DeleteLocalRef(jname);
             env->DeleteLocalRef(cls_M);
             if (match) {
-                yambz::openCallForMethod(env, jm);
+                openCallForMethod(env, jm);
                 env->DeleteLocalRef(jm);
                 break;
             }
@@ -134,26 +158,17 @@ void yambz_openCallFor(uint32_t classIdx) {
     env->DeleteLocalRef(jcls);
 }
 
-#include "ui/Notifications.h"
-#include "call/HeapPicker.h"
-#include "call/HeapPickerUI.h"
-#include "call/Presets.h"
-#include "call/History.h"
-#include "core/ClassTypes.h"
-
 void yambz_openHeapPicker(const char* type) {
-    auto& ui = yambz::heapPickerUI();
+    auto& ui = heapPickerUI();
     std::strncpy(ui.searchType, type, sizeof(ui.searchType) - 1);
-    ui.searchType[sizeof(ui.searchType)-1] = '\0';
+    ui.searchType[sizeof(ui.searchType) - 1] = '\0';
     ui.show = true;
     ui.selectedIdx = -1;
 }
 
 void yambz_useInstanceFromPicker(int idx) {
-    jobject ref = yambz::HeapPicker::instance().pick(idx);
+    jobject ref = HeapPicker::instance().pick(idx);
     if (!ref) return;
-
-    // احصل على الوصف
 
     JavaVM* vm = yambz_getGlobalVM();
     if (!vm) return;
@@ -161,7 +176,6 @@ void yambz_useInstanceFromPicker(int idx) {
     if (vm->GetEnv((void**)&env, JNI_VERSION_1_6) != JNI_OK)
         vm->AttachCurrentThread(&env, nullptr);
 
-    // اعرضه في شريط الإشعارات (مؤقتاً — سيتحسن في الرد 8)
     jclass cls = env->GetObjectClass(ref);
     jmethodID m_toStr = env->GetMethodID(cls, "toString", "()Ljava/lang/String;");
     if (m_toStr) {
@@ -174,61 +188,15 @@ void yambz_useInstanceFromPicker(int idx) {
         }
     }
     env->DeleteLocalRef(cls);
-
-    // TODO: application إلى CallTab thisNode (سيُعالج في رد 8 wiring)
 }
 
-// ─── Presets / History JNI ───
-extern "C" JNIEXPORT jboolean JNICALL
-Java_com_yambz_bridge_CallBridge_nativeSavePreset(
-    JNIEnv* env, jclass, jstring methodDesc, jstring name, jstring json)
-{
-    auto toStr = [&](jstring js) -> std::string {
-        if (!js) return "";
-        const char* c = env->GetStringUTFChars(js, nullptr);
-        std::string r = c ? c : "";
-        env->ReleaseStringUTFChars(js, c);
-        return r;
-    };
-    return yambz::Presets::instance().save(toStr(methodDesc), toStr(name), toStr(json))
-        ? JNI_TRUE : JNI_FALSE;
-}
-
-extern "C" JNIEXPORT jobjectArray JNICALL
-Java_com_yambz_bridge_CallBridge_nativeListPresets(
-    JNIEnv* env, jclass, jstring methodDesc)
-{
-    const char* c = env->GetStringUTFChars(methodDesc, nullptr);
-    auto list = yambz::Presets::instance().listFor(c ? c : "");
-    env->ReleaseStringUTFChars(methodDesc, c);
-    jclass cls_Str = env->FindClass("java/lang/String");
-    jobjectArray out = env->NewObjectArray((jsize)list.size(), cls_Str, nullptr);
-    for (size_t i = 0; i < list.size(); i++) {
-        jstring js = env->NewStringUTF(list[i].name.c_str());
-        env->SetObjectArrayElement(out, (jsize)i, js);
-        env->DeleteLocalRef(js);
-    }
-    return out;
-}
-
-// ─── init dirs (يُستدعى من ModBootstrap) ───
+// Storage helpers
 extern "C" JNIEXPORT void JNICALL
-Java_com_yambz_bridge_ModBootstrap_nativeInitStorage(JNIEnv* env, jclass, jstring cacheDir)
-{
+Java_com_yambz_bridge_ModBootstrap_nativeInitStorage(JNIEnv* env, jclass, jstring cacheDir) {
     const char* c = env->GetStringUTFChars(cacheDir, nullptr);
     std::string base = c ? c : "/data/local/tmp";
     env->ReleaseStringUTFChars(cacheDir, c);
-    yambz::Presets::instance().init(base + "/yambz/presets");
-    yambz::History::instance().init(base + "/yambz/history.txt");
+    Presets::instance().init(base + "/yambz/presets");
+    History::instance().init(base + "/yambz/history.txt");
     LOGI("Storage initialized: %s", base.c_str());
-
-/* yambz_notify removed - re-added at end of file */
-}
-
-// ═══════════════════════════════════════════════════════════
-//  yambz_notify — file-scope helper
-//  (do NOT insert this before any closing brace)
-// ═══════════════════════════════════════════════════════════
-void yambz_notify(const char* msg) {
-    if (msg) yambz::Notifications::instance().push(msg, 2.5f);
 }

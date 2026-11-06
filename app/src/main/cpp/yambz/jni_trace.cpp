@@ -272,7 +272,7 @@ Java_com_yambz_bridge_TraceCapture_nativeOnBefore(JNIEnv* env, jclass,
 
 extern "C" JNIEXPORT void JNICALL
 Java_com_yambz_bridge_TraceCapture_nativeOnAfter(JNIEnv* env, jclass,
-                                                  jint sessionId, jobject frame) {
+                                                  jint sessionId, jobject frame, jlong elapsedMs) {
     jni_trace_onEvent((uint32_t) sessionId, env, frame, false);
 }
 
