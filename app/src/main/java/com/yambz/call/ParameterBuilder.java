@@ -196,16 +196,17 @@ public final class ParameterBuilder {
                     instance = UnsafeHelper.allocateInstance(cls);
                 }
 
-                // apply fields
+                // apply fields (correctly scoped loop variable)
                 JSONObject fields = spec.optJSONObject("fields");
                 if (fields != null) {
-                    java.util.Iterator<String> it = fields.keys();
-                    while (it.hasNext()) {
-                        String fldName2 = it.next();
-                        JSONObject fspec = fields.getJSONObject(fldName2);
+                    java.util.Iterator<String> fldIt = fields.keys();
+                    while (fldIt.hasNext()) {
+                        String fieldName = fldIt.next();
+                        JSONObject fspec = fields.getJSONObject(fieldName);
                         Object fval = buildFrom(fspec, loader, depth + 1);
-                        setField(instance, cls, fldName, fval);
+                        setField(instance, cls, fieldName, fval);
                     }
+                }
                 }
                 return instance;
             }

@@ -124,15 +124,19 @@ public final class AlbatrossReflection {
         return out;
     }
 
+    @SuppressWarnings({"unchecked", "rawtypes"})
     public static List<Class<?>> searchSubclasses(Class<?> parent, int maxResults) {
         List<Class<?>> out = new ArrayList<>();
         try {
-            Albatross.searchSubClass((Class<?> c, long p) -> {
-                out.add(c);
+            // Raw type to bypass generic capture issues
+            qing.albatross.search.SearchClassCallback callback = (c, p) -> {
+                out.add((Class<?>) c);
                 return out.size() < maxResults
                     ? qing.albatross.search.SearchClassCallback.CONTINUE
                     : qing.albatross.search.SearchClassCallback.STOP;
-            }, parent, qing.albatross.search.SearchClassCallback.SCOPE_ALL);
+            };
+            Albatross.searchSubClass(callback, (Class) parent,
+                qing.albatross.search.SearchClassCallback.SCOPE_ALL);
         } catch (Throwable t) {
             Log.w(TAG, "searchSubClass failed: " + t);
         }
