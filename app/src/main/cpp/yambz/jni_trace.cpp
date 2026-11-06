@@ -9,6 +9,10 @@
 #include "trace/TraceEvent.h"
 #include "core/Logger.h"
 
+#include "core/ClassEnumerator.h"
+#include "core/ClassTypes.h"
+#include "trace/TraceUI.h"
+
 using namespace yambz;
 
 // ═══════════════════════════════════════════════════════════
@@ -453,9 +457,6 @@ Java_com_yambz_bridge_ConstructorTraceCapture_nativeOnReturn(
 }
 
 #include "call/TracePresets.h"
-#include "core/ClassEnumerator.h"
-#include "core/ClassTypes.h"
-#include "trace/TraceUI.h"
 
 void yambz_saveTracePreset(const char* name) {
     auto& ui = yambz::traceUI();
