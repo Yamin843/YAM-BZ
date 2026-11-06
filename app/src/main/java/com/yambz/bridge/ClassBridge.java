@@ -255,4 +255,49 @@ public final class ClassBridge {
         if (Modifier.isSynchronized(m)) sb.append("synchronized ");
         return sb.toString().trim();
     }
+
+    // ══════════════════════════════════════════════════════════
+    //  Schema queries (used by ParamEditor to build defaults)
+    // ══════════════════════════════════════════════════════════
+
+    /** Returns ["name|type", ...] for all non-static fields */
+    public static String[] getFieldSchema(String className) {
+        List<String> out = new ArrayList<>();
+        try {
+            Class<?> cls = findClass(className);
+            if (cls == null) return new String[0];
+            for (Class<?> c = cls; c != null && c != Object.class; c = c.getSuperclass()) {
+                for (Field f : c.getDeclaredFields()) {
+                    if (Modifier.isStatic(f.getModifiers())) continue;
+                    if (f.isSynthetic()) continue;
+                    out.add(f.getName() + "|" + f.getType().getName());
+                }
+            }
+        } catch (Throwable t) {
+            Log.e(TAG, "getFieldSchema failed", t);
+        }
+        return out.toArray(new String[0]);
+    }
+
+    /** Returns ["name|args|retType", ...] for all methods (non-static) */
+    public static String[] getMethodSchema(String className) {
+        List<String> out = new ArrayList<>();
+        try {
+            Class<?> cls = findClass(className);
+            if (cls == null) return new String[0];
+            for (Method m : cls.getDeclaredMethods()) {
+                if (Modifier.isStatic(m.getModifiers())) continue;
+                StringBuilder args = new StringBuilder();
+                Class<?>[] params = m.getParameterTypes();
+                for (int i = 0; i < params.length; i++) {
+                    if (i > 0) args.append(',');
+                    args.append(params[i].getName());
+                }
+                out.add(m.getName() + "|" + args.toString() + "|" + m.getReturnType().getName());
+            }
+        } catch (Throwable t) {
+            Log.e(TAG, "getMethodSchema failed", t);
+        }
+        return out.toArray(new String[0]);
+    }
 }

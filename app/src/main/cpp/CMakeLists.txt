@@ -37,6 +37,8 @@ file(GLOB_RECURSE YAMBZ_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/ui/*.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/tabs/*.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/trace/*.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/params/*.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/bridge/*.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/jni/*.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/generated/*.cpp
 )
