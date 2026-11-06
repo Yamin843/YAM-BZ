@@ -1,0 +1,12 @@
+*.iml
+.gradle/
+local.properties
+.idea/
+.DS_Store
+build/
+captures/
+.externalNativeBuild/
+.cxx/
+app/src/main/cpp/imgui/
+app/src/main/cpp/yambz/embed/
+*.apk
