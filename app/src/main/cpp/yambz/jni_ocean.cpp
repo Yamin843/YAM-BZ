@@ -5,7 +5,6 @@
 #include "core/Helpers.h"
 #include "core/Logger.h"
 #include "trace/OceanTracePanel.h"
-#include "bridge/ObjectDumper.h"
 
 using namespace yambz;
 
