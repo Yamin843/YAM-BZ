@@ -24,3 +24,7 @@ void yambz_notify(const char* msg);
 // ═══════════════════════════════════════════════════════════
 void fab_setJavaVM(JavaVM* vm);
 void panel_setJavaVM(JavaVM* vm);
+
+// ═══════════════════════════════════════════════════════════
+//  Ocean (from trace/OceanState.cpp — called by UI)
+// ═══════════════════════════════════════════════════════════
