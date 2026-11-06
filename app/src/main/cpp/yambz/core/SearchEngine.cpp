@@ -7,6 +7,7 @@
 #include <cctype>
 #include <cstring>
 #include <atomic>
+#include <mutex>
 
 namespace yambz {
 

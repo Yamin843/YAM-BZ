@@ -2,6 +2,7 @@
 #include "FabManager.h"
 #include "MainWindow.h"
 #include "../core/Logger.h"
+#include <mutex>
 
 namespace yambz {
 

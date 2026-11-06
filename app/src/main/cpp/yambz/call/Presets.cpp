@@ -7,6 +7,7 @@
 #include <dirent.h>
 #include <sstream>
 #include <chrono>
+#include <mutex>
 
 namespace yambz {
 

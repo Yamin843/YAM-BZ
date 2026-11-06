@@ -7,6 +7,7 @@
 #include <mutex>
 #include <vector>
 #include <algorithm>
+#include <memory>
 
 namespace yambz {
 

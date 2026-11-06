@@ -5,6 +5,7 @@
 #include <sstream>
 #include <sys/stat.h>
 #include <chrono>
+#include <mutex>
 
 namespace yambz {
 

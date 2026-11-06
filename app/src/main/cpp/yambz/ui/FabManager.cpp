@@ -3,6 +3,7 @@
 #include "MainWindow.h"
 #include "Notifications.h"
 #include "../core/Logger.h"
+#include <mutex>
 
 namespace yambz {
 

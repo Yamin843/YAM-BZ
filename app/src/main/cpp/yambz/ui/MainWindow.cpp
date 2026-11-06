@@ -13,6 +13,9 @@
 #include <imgui_internal.h>
 #include <cmath>
 #include <cstring>
+#include <mutex>
+#include <atomic>
+#include <algorithm>
 
 namespace yambz {
 

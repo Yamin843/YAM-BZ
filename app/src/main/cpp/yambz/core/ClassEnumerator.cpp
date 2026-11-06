@@ -4,6 +4,9 @@
 #include <thread>
 #include <algorithm>
 #include <cstring>
+#include <vector>
+#include <mutex>
+#include <memory>
 
 namespace yambz {
 

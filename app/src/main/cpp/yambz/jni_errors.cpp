@@ -78,6 +78,7 @@ Java_com_yambz_bridge_ModBootstrap_nativeSetCacheDir(JNIEnv* env, jclass, jstrin
 }
 
 #include "core/Favorites.h"
+#include <string>
 
 extern "C" JNIEXPORT void JNICALL
 Java_com_yambz_bridge_ModBootstrap_nativeInitFavorites(JNIEnv* env, jclass, jstring dir) {

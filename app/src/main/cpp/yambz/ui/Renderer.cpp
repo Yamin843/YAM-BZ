@@ -14,6 +14,7 @@
 #include <GLES3/gl3.h>
 #include <chrono>
 #include <cmath>
+#include <mutex>
 
 namespace yambz {
 

@@ -7,6 +7,7 @@
 #include <sys/stat.h>
 #include <dirent.h>
 #include <cstdio>
+#include <mutex>
 
 namespace yambz {
 

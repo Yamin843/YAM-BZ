@@ -7,6 +7,7 @@
 #include <vector>
 #include <mutex>
 #include <atomic>
+#include <string>
 
 namespace yambz {
 

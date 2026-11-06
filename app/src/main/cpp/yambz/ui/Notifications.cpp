@@ -1,6 +1,8 @@
 #include "Notifications.h"
 #include "Theme.h"
 #include <imgui.h>
+#include <mutex>
+#include <chrono>
 
 namespace yambz {
 

@@ -2,6 +2,7 @@
 #include <vector>
 #include "TraceStore.h"
 #include "../core/Logger.h"
+#include <mutex>
 
 namespace yambz {
 

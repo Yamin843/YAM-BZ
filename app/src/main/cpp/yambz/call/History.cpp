@@ -3,6 +3,7 @@
 #include <fstream>
 #include <chrono>
 #include <sstream>
+#include <mutex>
 
 namespace yambz {
 

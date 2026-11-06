@@ -1,6 +1,8 @@
 #include "ParamNode.h"
 #include <sstream>
 #include <cstdio>
+#include <string>
+#include <memory>
 
 namespace yambz {
 

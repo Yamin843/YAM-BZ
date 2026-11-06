@@ -3,6 +3,8 @@
 //
 
 #ifndef ALBATROSS_HOOK_ALBATROSS_H
+
+#include <jni.h>
 #define ALBATROSS_HOOK_ALBATROSS_H
 
 //#include "base_types.h"

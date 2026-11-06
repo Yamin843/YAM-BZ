@@ -4,6 +4,8 @@
 #include <imgui.h>
 #include <cstdio>
 #include <cstring>
+#include <string>
+#include <memory>
 
 namespace yambz {
 
