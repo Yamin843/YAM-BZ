@@ -6,6 +6,8 @@
 #include "../tabs/NativeTab.h"
 #include "../tabs/StalkerTab.h"
 #include "../tabs/SettingsTab.h"
+#include "../tabs/BackupTab.h"
+#include "../tabs/HeapTab.h"
 
 #include <imgui.h>
 #include <imgui_internal.h>
@@ -128,8 +130,8 @@ void MainWindow::drawMain() {
     // ─── Sidebar ───
     ImGui::SetCursorPos(ImVec2(0, tbh));
     ImGui::BeginChild("##sb", ImVec2(sbw, wsize.y - tbh - sbh), false);
-    const char* tabs[] = {"CLASSES", "TRACE", "CALL", "NATIVE", "STALKER", "SETTINGS"};
-    for (int i = 0; i < 6; i++) {
+    const char* tabs[] = {"CLASSES", "TRACE", "CALL", "NATIVE", "STALKER", "BACKUP", "HEAP", "SETTINGS"};
+    for (int i = 0; i < 8; i++) {
         bool sel = (m_impl->tab == i);
         ImVec4 bg = sel ? ImVec4(0.20f, 0.16f, 0.05f, 1.0f)
                         : ImVec4(0.10f, 0.10f, 0.12f, 1.0f);
@@ -155,7 +157,9 @@ void MainWindow::drawMain() {
         case 2: CallTab::instance().draw(); break;
         case 3: NativeTab::instance().draw(); break;
         case 4: StalkerTab::instance().draw(); break;
-        case 5: SettingsTab::instance().draw(); break;
+        case 5: BackupTab::instance().draw(); break;
+        case 6: HeapTab::instance().draw(); break;
+        case 7: SettingsTab::instance().draw(); break;
     }
     ImGui::EndChild();
 

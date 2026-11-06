@@ -356,4 +356,45 @@ public final class OceanController {
             return null;
         }
     }
+
+    // ══════════════════════════════════════════════════════════
+    //  Extra APIs needed by full TraceTab UI
+    // ══════════════════════════════════════════════════════════
+
+    /** Read current event count (fast) */
+    public static long getTotalEvents() {
+        return 0; // managed by C++ side
+    }
+
+    /** Add whitelist / blacklist (already present above for package/class) */
+
+    /** Dump given class to file */
+    public static boolean dumpClassByName(String className) {
+        try {
+            Class<?> c = ClassBridge.findClass(className);
+            if (c == null) return false;
+            setDumpConfig(yambzCacheDir());
+            return dumpClass(c);
+        } catch (Throwable t) { return false; }
+    }
+
+    /** Dump given method to file */
+    public static boolean dumpMethodByName(String className, String methodName, String argTypes) {
+        try {
+            Class<?> c = ClassBridge.findClass(className);
+            if (c == null) return false;
+            setDumpConfig(yambzCacheDir());
+            java.lang.reflect.Method m = c.getDeclaredMethod(methodName, parseArgTypes(argTypes));
+            return dumpMethod(m);
+        } catch (Throwable t) { return false; }
+    }
+
+    private static String yambzCacheDir() {
+        try {
+            Class<?> h = Class.forName("com.yambz.bridge.UIBridge");
+            java.lang.reflect.Field f = h.getDeclaredField("sCacheDir");
+            f.setAccessible(true);
+            return (String) f.get(null);
+        } catch (Throwable t) { return "/data/local/tmp"; }
+    }
 }

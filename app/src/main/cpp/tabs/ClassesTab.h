@@ -1,35 +1,21 @@
 #pragma once
-#include <vector>
 #include <string>
+#include <vector>
 #include <mutex>
-#include <cstdint>
 
 namespace yambz {
 class ClassesTab {
 public:
     static ClassesTab& instance();
     void draw();
-    void onStartClicked();
-    void startClassEnum();
+
+    // Target setters (called from context menu)
+    void setTraceTarget(const std::string& cls, const std::string& member);
+    void setCallTarget(const std::string& cls, const std::string& member);
+
 private:
     ClassesTab() = default;
-
-    struct State {
-        std::vector<std::string> classes;
-        std::mutex classesMu;
-        bool enumerating = false;
-        bool complete = false;
-
-        // Selected class + its members
-        std::string selectedClass;
-        std::vector<std::string> selectedMembers;
-        std::mutex membersMu;
-
-        // UI
-        char searchBuf[128] = {0};
-        char memberSearchBuf[128] = {0};
-        int  selectedMemberIdx = -1;
-    };
-    State* state();
+    struct State;
+    State* st();
 };
 }
