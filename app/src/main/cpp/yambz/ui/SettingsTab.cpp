@@ -1,25 +1,20 @@
 #include "SettingsTab.h"
-#include <string>
 #include "Theme.h"
-#include "core/ErrorContext.h"
-#include "core/Logger.h"
-#include "trace/TraceStore.h"
+#include "../core/ErrorContext.h"
+#include "../core/Logger.h"
+#include "../trace/TraceStore.h"
 
 #include <imgui.h>
 #include <cstring>
 #include <cstdio>
 #include <fstream>
-#include <sstream>
-#include <sys/stat.h>
+#include <string>
 
 namespace yambz {
 
-SettingsTab& SettingsTab::instance() {
-    static SettingsTab t;
-    return t;
-}
-
-// ─── settings struct ───
+// ═══════════════════════════════════════════════════════════
+//  Settings struct + global
+// ═══════════════════════════════════════════════════════════
 struct Settings {
     float fontSize = 38.0f;
     bool  darkTheme = true;
@@ -30,9 +25,28 @@ struct Settings {
     int   graphDepth = 5;
     int   objectDumpDepth = 5;
 };
+
 static Settings g_settings;
 static const char* kSettingsFile = "/settings.cfg";
-static bool s_dirty = false;
+
+static std::string settingsPath();
+
+// ═══════════════════════════════════════════════════════════
+//  AlbatrossFeatures — forward declared for use in draw()
+// ═══════════════════════════════════════════════════════════
+static const char* AlbatrossFeaturesInternal() {
+    static char buf[128] = "unknown";
+    snprintf(buf, sizeof buf, "jit,instruction,trace");
+    return buf;
+}
+
+// ═══════════════════════════════════════════════════════════
+//  SettingsTab
+// ═══════════════════════════════════════════════════════════
+SettingsTab& SettingsTab::instance() {
+    static SettingsTab t;
+    return t;
+}
 
 static std::string settingsPath() {
     extern std::string yambz_getCacheDir();
@@ -49,14 +63,14 @@ void SettingsTab::load() {
         std::string k = line.substr(0, eq);
         std::string v = line.substr(eq + 1);
         try {
-            if (k == "fontSize")       g_settings.fontSize = std::stof(v);
-            else if (k == "darkTheme") g_settings.darkTheme = (v == "1");
-            else if (k == "traceCap")  g_settings.traceCapacity = std::stoi(v);
-            else if (k == "errorCap")  g_settings.errorCapacity = std::stoi(v);
-            else if (k == "autoEnum")  g_settings.autoStartEnum = (v == "1");
-            else if (k == "showFps")   g_settings.showFps = (v == "1");
-            else if (k == "graphDepth")g_settings.graphDepth = std::stoi(v);
-            else if (k == "objDepth")  g_settings.objectDumpDepth = std::stoi(v);
+            if (k == "fontSize")        g_settings.fontSize = std::stof(v);
+            else if (k == "darkTheme")  g_settings.darkTheme = (v == "1");
+            else if (k == "traceCap")   g_settings.traceCapacity = std::stoi(v);
+            else if (k == "errorCap")   g_settings.errorCapacity = std::stoi(v);
+            else if (k == "autoEnum")   g_settings.autoStartEnum = (v == "1");
+            else if (k == "showFps")    g_settings.showFps = (v == "1");
+            else if (k == "graphDepth") g_settings.graphDepth = std::stoi(v);
+            else if (k == "objDepth")   g_settings.objectDumpDepth = std::stoi(v);
         } catch (...) {}
     }
     Theme::setFontSize(g_settings.fontSize);
@@ -149,8 +163,7 @@ void SettingsTab::draw() {
     Theme::drawSectionHeader("About");
     ImGui::Text("YAM-BZ v1.0.0");
     ImGui::Text("Built: %s %s", __DATE__, __TIME__);
-    ImGui::Text("Albatross: %s",
-        AlbatrossFeatures());  // helper below
+    ImGui::Text("Albatross: %s", AlbatrossFeaturesInternal());
 
     ImGui::Spacing();
     ImGui::Separator();
@@ -169,21 +182,38 @@ void SettingsTab::draw() {
         ErrorContext::instance().setCapacity((size_t) g_settings.errorCapacity);
         save();
     }
-    if (changed) s_dirty = true;
-}
-
-// ─── helper: آلbatross features ───
-extern "C" const char* AlbatrossFeatures() {
-    static char buf[128] = "unknown";
-    // (سنتخطى الاتصال بـ Java هنا — نطبع ثابتاً)
-    snprintf(buf, sizeof buf, "jit,instruction,trace");
-    return buf;
+    (void)changed;
 }
 
 } // namespace yambz
 
-bool yambz_showFps() {
-    return g_settings.showFps;
+// ═══════════════════════════════════════════════════════════
+//  Extern C helpers (outside namespace — explicit qualification)
+// ═══════════════════════════════════════════════════════════
+extern "C" bool yambz_showFps() {
+    // Access via public getter — no direct namespace access
+    // (g_settings is static inside namespace yambz, not visible here)
+    // Use an exported accessor pattern: declare friend or getter below
+    // For simplicity: return from a static function defined inside namespace
+    extern bool yambz_settings_showFps();
+    return yambz_settings_showFps();
 }
-int yambz_getBacktraceDepth() { return g_settings.graphDepth; }
-int yambz_getObjectDumpDepth() { return g_settings.objectDumpDepth; }
+
+extern "C" int yambz_getBacktraceDepth() {
+    extern int yambz_settings_backtraceDepth();
+    return yambz_settings_backtraceDepth();
+}
+
+extern "C" int yambz_getObjectDumpDepth() {
+    extern int yambz_settings_objectDumpDepth();
+    return yambz_settings_objectDumpDepth();
+}
+
+// ═══════════════════════════════════════════════════════════
+//  Accessor functions inside namespace (to reach static)
+// ═══════════════════════════════════════════════════════════
+namespace yambz {
+    bool yambz_settings_showFps()        { return g_settings.showFps; }
+    int  yambz_settings_backtraceDepth() { return g_settings.graphDepth; }
+    int  yambz_settings_objectDumpDepth(){ return g_settings.objectDumpDepth; }
+}
