@@ -1,6 +1,7 @@
 #include "CallEngine.h"
 #include "ParamNode.h"
-#include "../core/Logger.h"
+#include "core/Helpers.h"
+#include "core/Logger.h"
 
 #include <chrono>
 #include <thread>
@@ -9,20 +10,12 @@
 #include <atomic>
 #include <string>
 
-#include <jni.h>
-#include "core/Helpers.h"
-
-namespace yambz {
-
-CallEngine& CallEngine::instance() {
-    static CallEngine e;
-    return e;
-}
-
-static JavaVM* getVM() {
-
-    return yambz_getGlobalVM();
-}
+// ═══════════════════════════════════════════════════════════
+//  Global state (file-scope, no namespace)
+// ═══════════════════════════════════════════════════════════
+static std::atomic<bool> g_rawRunning{false};
+static std::mutex        g_rawMu;
+static yambz::CallResult g_rawResult;
 
 static int64_t nowMs() {
     using namespace std::chrono;
@@ -30,16 +23,9 @@ static int64_t nowMs() {
 }
 
 // ═══════════════════════════════════════════════════════════
-//  Global state
+//  Static worker
 // ═══════════════════════════════════════════════════════════
-static std::atomic<bool> g_rawRunning{false};
-static std::mutex g_rawMu;
-static CallResult g_rawResult;
-
-// ═══════════════════════════════════════════════════════════
-//  Static worker — no lambdas
-// ═══════════════════════════════════════════════════════════
-static void doInvokeOnThread(JavaVM* vm, jobject methodG,
+static void callEngineWorker(JavaVM* vm, jobject methodG,
                               std::string methodDesc,
                               std::string thisJson,
                               std::vector<std::string> argsJson) {
@@ -50,22 +36,22 @@ static void doInvokeOnThread(JavaVM* vm, jobject methodG,
     }
 
     long t0 = nowMs();
-    CallResult res;
+    yambz::CallResult res;
 
     // 1) ModBootstrap.getClassLoader
     jclass cls_BS = env->FindClass("com/yambz/bridge/ModBootstrap");
-    jmethodID m_getLoader = env->GetStaticMethodID(cls_BS, "getClassLoader",
-        "()Ljava/lang/ClassLoader;");
-    jobject loader = env->CallStaticObjectMethod(cls_BS, m_getLoader);
+    jmethodID m_getLoader = cls_BS ? env->GetStaticMethodID(cls_BS, "getClassLoader",
+        "()Ljava/lang/ClassLoader;") : nullptr;
+    jobject loader = (m_getLoader && cls_BS) ? env->CallStaticObjectMethod(cls_BS, m_getLoader) : nullptr;
 
     // 2) ParameterBuilder.build
     jclass cls_PB = env->FindClass("com/yambz/call/ParameterBuilder");
-    jmethodID m_build = env->GetStaticMethodID(cls_PB, "build",
-        "(Ljava/lang/String;Ljava/lang/ClassLoader;)Ljava/lang/Object;");
+    jmethodID m_build = cls_PB ? env->GetStaticMethodID(cls_PB, "build",
+        "(Ljava/lang/String;Ljava/lang/ClassLoader;)Ljava/lang/Object;") : nullptr;
 
     // 3) Build this
     jobject thisObj = nullptr;
-    if (!thisJson.empty()) {
+    if (!thisJson.empty() && m_build) {
         jstring js = env->NewStringUTF(thisJson.c_str());
         thisObj = env->CallStaticObjectMethod(cls_PB, m_build, js, loader);
         env->DeleteLocalRef(js);
@@ -78,17 +64,14 @@ static void doInvokeOnThread(JavaVM* vm, jobject methodG,
 
     // 4) Build args array
     jobjectArray argsArr = nullptr;
-    if (!argsJson.empty()) {
+    if (!argsJson.empty() && m_build) {
         jclass cls_Obj = env->FindClass("java/lang/Object");
         argsArr = env->NewObjectArray((jsize)argsJson.size(), cls_Obj, nullptr);
         for (size_t i = 0; i < argsJson.size(); i++) {
             jstring js = env->NewStringUTF(argsJson[i].c_str());
             jobject o = env->CallStaticObjectMethod(cls_PB, m_build, js, loader);
             env->DeleteLocalRef(js);
-            if (env->ExceptionCheck()) {
-                env->ExceptionClear();
-                o = nullptr;
-            }
+            if (env->ExceptionCheck()) { env->ExceptionClear(); o = nullptr; }
             env->SetObjectArrayElement(argsArr, (jsize)i, o);
             if (o) env->DeleteLocalRef(o);
         }
@@ -96,9 +79,9 @@ static void doInvokeOnThread(JavaVM* vm, jobject methodG,
 
     // 5) MethodInvoker.invoke
     jclass cls_MI = env->FindClass("com/yambz/call/MethodInvoker");
-    jmethodID m_inv = env->GetStaticMethodID(cls_MI, "invoke",
-        "(Ljava/lang/reflect/Member;Ljava/lang/Object;[Ljava/lang/Object;)Lcom/yambz/call/MethodInvoker$Result;");
-    jobject result = env->CallStaticObjectMethod(cls_MI, m_inv, methodG, thisObj, argsArr);
+    jmethodID m_inv = cls_MI ? env->GetStaticMethodID(cls_MI, "invoke",
+        "(Ljava/lang/reflect/Member;Ljava/lang/Object;[Ljava/lang/Object;)Lcom/yambz/call/MethodInvoker$Result;") : nullptr;
+    jobject result = (m_inv && cls_MI) ? env->CallStaticObjectMethod(cls_MI, m_inv, methodG, thisObj, argsArr) : nullptr;
 
     if (env->ExceptionCheck()) {
         env->ExceptionDescribe();
@@ -114,10 +97,10 @@ static void doInvokeOnThread(JavaVM* vm, jobject methodG,
         jobject e = env->GetObjectField(result, f_err);
 
         jclass cls_OD = env->FindClass("com/yambz/bridge/ObjectDumper");
-        jmethodID m_dump = env->GetStaticMethodID(cls_OD, "dump",
-            "(Ljava/lang/Object;)Ljava/lang/String;");
+        jmethodID m_dump = cls_OD ? env->GetStaticMethodID(cls_OD, "dump",
+            "(Ljava/lang/Object;)Ljava/lang/String;") : nullptr;
 
-        if (v) {
+        if (v && m_dump) {
             jstring js = (jstring) env->CallStaticObjectMethod(cls_OD, m_dump, v);
             if (js) {
                 const char* c = env->GetStringUTFChars(js, nullptr);
@@ -127,7 +110,7 @@ static void doInvokeOnThread(JavaVM* vm, jobject methodG,
             }
             env->DeleteLocalRef(v);
         }
-        if (e) {
+        if (e && m_dump) {
             jstring js = (jstring) env->CallStaticObjectMethod(cls_OD, m_dump, e);
             if (js) {
                 const char* c = env->GetStringUTFChars(js, nullptr);
@@ -151,43 +134,30 @@ static void doInvokeOnThread(JavaVM* vm, jobject methodG,
         g_rawResult = res;
     }
     g_rawRunning.store(false);
-    LOGI("CallEngine: invoked %s → %s in %ldms",
-         methodDesc.c_str(), res.success ? "OK" : "FAIL", res.elapsedMs);
+    yambz::LOGI("CallEngine: %s → %s in %ldms",
+                methodDesc.c_str(), res.success ? "OK" : "FAIL", res.elapsedMs);
 
     vm->DetachCurrentThread();
 }
 
 // ═══════════════════════════════════════════════════════════
-//  Public API
+//  CallEngine class methods (namespace yambz)
 // ═══════════════════════════════════════════════════════════
-void callEngineInvokeRaw(JNIEnv* callerEnv, jobject method,
-                         const std::string& methodDesc,
-                         const std::string& thisJson,
-                         const std::vector<std::string>& argsJson) {
-    if (g_rawRunning.exchange(true)) return;
+namespace yambz {
 
-    jobject methodG = callerEnv->NewGlobalRef(method);
-    JavaVM* vm = nullptr;
-    callerEnv->GetJavaVM(&vm);
-    if (!vm) {
-        callerEnv->DeleteGlobalRef(methodG);
-        g_rawRunning.store(false);
-        return;
-    }
-
-    std::thread t(doInvokeOnThread, vm, methodG, methodDesc, thisJson, argsJson);
-    t.detach();
+CallEngine& CallEngine::instance() {
+    static CallEngine e;
+    return e;
 }
 
 void CallEngine::cancel() {
-    JavaVM* vm = getVM();
+    JavaVM* vm = yambz_getGlobalVM();
     if (!vm) return;
     JNIEnv* env = nullptr;
-    if (vm->GetEnv((void**)&env, JNI_VERSION_1_6) != JNI_OK) {
+    if (vm->GetEnv((void**)&env, JNI_VERSION_1_6) != JNI_OK)
         vm->AttachCurrentThread(&env, nullptr);
-    }
     jclass cls_MI = env->FindClass("com/yambz/call/MethodInvoker");
-    jmethodID mid = env->GetStaticMethodID(cls_MI, "cancel", "()V");
+    jmethodID mid = cls_MI ? env->GetStaticMethodID(cls_MI, "cancel", "()V") : nullptr;
     if (mid) env->CallStaticVoidMethod(cls_MI, mid);
 }
 
@@ -201,12 +171,39 @@ void CallEngine::clearResult() {
     g_rawResult = CallResult{};
 }
 
-// ═══════════════════════════════════════════════════════════
-//  Global helpers
-// ═══════════════════════════════════════════════════════════
-bool callEngineIsRunning() { return g_rawRunning.load(); }
+} // namespace yambz
 
-std::string callEngineLastResultJson() {
+// ═══════════════════════════════════════════════════════════
+//  GLOBAL HELPERS (real definitions, matching Helpers.h)
+// ═══════════════════════════════════════════════════════════
+bool yambz_callEngineInvokeRaw(JNIEnv* env, jobject method,
+                                const std::string& methodDesc,
+                                const std::string& thisJson,
+                                const std::vector<std::string>& argsJson) {
+    if (g_rawRunning.exchange(true)) {
+        // already running
+        return false;
+    }
+
+    jobject methodG = env->NewGlobalRef(method);
+    JavaVM* vm = nullptr;
+    env->GetJavaVM(&vm);
+    if (!vm) {
+        env->DeleteGlobalRef(methodG);
+        g_rawRunning.store(false);
+        return false;
+    }
+
+    std::thread t(callEngineWorker, vm, methodG, methodDesc, thisJson, argsJson);
+    t.detach();
+    return true;
+}
+
+bool yambz_callEngineIsRunning() {
+    return g_rawRunning.load();
+}
+
+std::string yambz_callEngineLastResultJson() {
     std::lock_guard<std::mutex> lk(g_rawMu);
     std::string out = "{";
     out += "\"success\":";
@@ -227,9 +224,7 @@ std::string callEngineLastResultJson() {
     return out;
 }
 
-void callEngineClear() {
+void yambz_callEngineClear() {
     std::lock_guard<std::mutex> lk(g_rawMu);
-    g_rawResult = CallResult{};
+    g_rawResult = yambz::CallResult{};
 }
-
-} // namespace yambz
