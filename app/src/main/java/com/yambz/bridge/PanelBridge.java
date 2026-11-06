@@ -6,6 +6,7 @@ import android.opengl.GLSurfaceView;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.ViewGroup;
 
 import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
@@ -40,7 +41,9 @@ public class PanelBridge extends GLSurfaceView implements GLSurfaceView.Renderer
         setPreserveEGLContextOnPause(true);
         setFocusable(false);
         setFocusableInTouchMode(false);
-        setLayoutParams(new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
+        setLayoutParams(new ViewGroup.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.MATCH_PARENT));
     }
 
     @Override public void onSurfaceCreated(GL10 gl, EGLConfig cfg) {

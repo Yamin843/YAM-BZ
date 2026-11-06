@@ -39,24 +39,24 @@ final class ActivityLifecycleHook {
         @MethodHookBackup
         private void onCreate(Bundle savedInstanceState) {
             onCreate(savedInstanceState);
-            ModManager.onActivityCreated(this);
+            ModManager.onActivityCreated((Activity) (Object) this);
         }
 
         @MethodHookBackup
         private void onResume() {
             onResume();
-            ModManager.onActivityResumed(this);
+            ModManager.onActivityResumed((Activity) (Object) this);
         }
 
         @MethodHookBackup
         private void onPause() {
-            ModManager.onActivityPaused(this);
+            ModManager.onActivityPaused((Activity) (Object) this);
             onPause();
         }
 
         @MethodHookBackup
         private void onDestroy() {
-            ModManager.onActivityDestroyed(this);
+            ModManager.onActivityDestroyed((Activity) (Object) this);
             onDestroy();
         }
     }
@@ -68,7 +68,7 @@ final class ActivityLifecycleHook {
             onCreate();
             try {
                 Application app = Albatross.currentApplication();
-                if (app == null) app = (Application) this;
+                if (app == null) app = (Application) (Object) this;
                 app.registerActivityLifecycleCallbacks(new AppLifecycleBridge());
                 Log.i(TAG, "ActivityLifecycleCallbacks registered");
             } catch (Throwable t) {

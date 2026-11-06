@@ -138,7 +138,7 @@ public final class ParameterBuilder {
                 if (cjs != null) {
                     java.util.Iterator<String> it = cjs.keys();
                     while (it.hasNext()) {
-                        String k = it.next();
+                        String fldName = it.next();
                         constants.put(k, cjs.get(k));
                     }
                 }
@@ -201,10 +201,10 @@ public final class ParameterBuilder {
                 if (fields != null) {
                     java.util.Iterator<String> it = fields.keys();
                     while (it.hasNext()) {
-                        String fname = it.next();
-                        JSONObject fspec = fields.getJSONObject(fname);
+                        String fldName2 = it.next();
+                        JSONObject fspec = fields.getJSONObject(fldName2);
                         Object fval = buildFrom(fspec, loader, depth + 1);
-                        setField(instance, cls, fname, fval);
+                        setField(instance, cls, fldName, fval);
                     }
                 }
                 return instance;
