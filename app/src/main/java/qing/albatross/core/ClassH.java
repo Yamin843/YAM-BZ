@@ -1,0 +1,38 @@
+/*
+ * Copyright 2025 QingWan (qingwanmail@foxmail.com)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package qing.albatross.core;
+
+import qing.albatross.annotation.ExecutionOption;
+import qing.albatross.annotation.TargetClass;
+import qing.albatross.classloader.DexCacheH;
+import qing.albatross.reflection.FieldDef;
+import qing.albatross.reflection.IntFieldDef;
+
+@TargetClass(value = Class.class,targetExec = ExecutionOption.DO_NOTHING)
+public class ClassH {
+
+  static IntFieldDef objectSize;
+
+  static IntFieldDef classSize;
+
+  static IntFieldDef dexTypeIndex;
+
+  static IntFieldDef dexClassDefIndex;
+
+//  @FieldRef(option = DefOption.INSTANCE)
+//  DexCacheH dexCache;
+  static FieldDef<DexCacheH> dexCache;
+}
