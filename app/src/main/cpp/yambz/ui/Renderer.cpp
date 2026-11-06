@@ -4,6 +4,7 @@
 #include "DetailView.h"
 #include "../call/HeapPickerUI.h"
 #include "Theme.h"
+#include "../trace/OceanTracePanel.h"
 #include "SettingsTab.h"
 #include "Notifications.h"
 #include "../core/Logger.h"
@@ -133,6 +134,7 @@ void Renderer::onDrawFrame(int w, int h) {
     TraceDialog::draw();
     drawDetailView();
     drawHeapPicker();
+    yambz::drawOceanTracePanel();
     Notifications::instance().draw();
 
     {

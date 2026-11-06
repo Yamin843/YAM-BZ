@@ -3,6 +3,7 @@
 #include "SearchBar.h"
 #include "Theme.h"
 #include "ClassesState.h"
+#include "../trace/OceanTracePanel.h"
 #include "../core/Favorites.h"
 #include "../core/ClassEnumerator.h"
 #include "../core/SearchEngine.h"

@@ -20,6 +20,7 @@ ANDROID_JAR="$ANDROID_HOME/platforms/$SDK_PLATFORM/android.jar"
 D8="$ANDROID_HOME/build-tools/$BUILD_TOOLS/d8"
 
 CORE_JAR="$ROOT/albatross-libs/aar/core.jar"
+OCEAN_JAR="$ROOT/albatross-libs/aar/ocean.jar"
 ANN_JAR="$ROOT/albatross-libs/aar/annotation.jar"
 
 BUILD_DIR="$ROOT/build-ninja"
@@ -40,6 +41,7 @@ die() { echo "❌ $1" >&2; exit 1; }
 [ -e "$D8" ]           || die "Missing: $D8"
 [ -d "$NDK" ]          || die "Missing NDK: $NDK"
 [ -f "$CORE_JAR" ]     || die "Missing: $CORE_JAR"
+[ -f "$OCEAN_JAR" ]    || die "Missing: $OCEAN_JAR"
 [ -f "$ANN_JAR" ]      || die "Missing: $ANN_JAR"
 [ -f "$ROOT/albatross-libs/jniLibs/$ABI/libalbatross_base.so" ] || \
     die "Missing libalbatross_base.so for $ABI"
@@ -64,7 +66,7 @@ javac -source 17 -target 17 \
       -encoding UTF-8 \
       -Xlint:-options \
       -Xlint:-deprecation \
-      -cp "$ANDROID_JAR:$CORE_JAR:$ANN_JAR" \
+      -cp "$ANDROID_JAR:$CORE_JAR:$ANN_JAR:$OCEAN_JAR" \
       -d "$BUILD_DIR/classes" \
       $JAVA_SOURCES 2>&1 | tee /tmp/javac.log
 
@@ -86,7 +88,8 @@ echo "▶ 2/5 Building dex (d8)..."
      --no-desugaring \
      $(find "$BUILD_DIR/classes" -name "*.class") \
      "$CORE_JAR" \
-     "$ANN_JAR"
+     "$ANN_JAR" \
+     "$OCEAN_JAR"
 
 [ -f "$BUILD_DIR/dex/classes.dex" ] || die "d8 produced no classes.dex"
 echo "  ✅ $(stat -c %s $BUILD_DIR/dex/classes.dex) bytes"

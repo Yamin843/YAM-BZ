@@ -124,4 +124,8 @@ public class PanelBridge extends GLSurfaceView implements GLSurfaceView.Renderer
 
     // ── Deep backtrace ──
     public static native boolean nativeStartDeepBacktrace(int durationMs, int maxFrames);
+
+    // ── Ocean Trace ──
+    public static native void nativeOpenOceanTrace();
+    public static native void nativeCloseOceanTrace();
 }
