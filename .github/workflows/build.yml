@@ -1,4 +1,4 @@
-name: Build YAM-BZ (.so only)
+name: Build YAM-BZ .so
 
 on:
   push:
@@ -8,24 +8,18 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 30
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup JDK 21 (LTS)
+      - name: Setup JDK 21
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '21'
 
-      - name: Setup Gradle 8.7
-        uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: '8.7'
-
-      - name: Install Android SDK (manual)
+      - name: Install Android SDK (cmdline-tools + NDK + build-tools)
         run: |
           set -e
           SDK_DIR="$HOME/android-sdk"
@@ -49,38 +43,18 @@ jobs:
           echo "ANDROID_SDK_ROOT=$SDK_DIR" >> $GITHUB_ENV
           echo "$SDK_DIR/cmdline-tools/latest/bin" >> $GITHUB_PATH
           echo "$SDK_DIR/platform-tools" >> $GITHUB_PATH
+          echo "$SDK_DIR/cmake/3.22.1/bin" >> $GITHUB_PATH
 
       - name: Fetch ImGui
         run: bash scripts/fetch_imgui.sh
 
-      - name: Generate embed stubs (pass 1)
-        run: bash scripts/gen_embed_stubs.sh
+      - name: Build .so
+        run: bash scripts/build.sh
 
-      - name: Build Pass 1 (produce dex — internal APK)
-        run: gradle :app:assembleRelease --stacktrace --no-daemon
-
-      - name: Embed assets
-        run: bash scripts/embed_assets.sh
-
-      - name: Build Pass 2 (final .so)
-        run: |
-          gradle clean
-          gradle :app:assembleRelease --stacktrace --no-daemon
-
-      - name: Collect .so ONLY (no APK)
-        run: |
-          mkdir -p artifacts
-          # Find libyambz.so
-          find app/build -name "libyambz.so" -exec cp {} artifacts/ \; 2>/dev/null || true
-          # REMOVE any APK accidentally copied
-          rm -f artifacts/*.apk
-          echo "=== Final artifacts ==="
-          ls -lh artifacts/
-
-      - name: Upload .so only
+      - name: Upload libyambz.so
         uses: actions/upload-artifact@v4
         with:
-          name: yambz-so-arm64
-          path: artifacts/libyambz.so
+          name: libyambz-so
+          path: build-ninja/cmake/libyambz.so
           retention-days: 30
           if-no-files-found: error
