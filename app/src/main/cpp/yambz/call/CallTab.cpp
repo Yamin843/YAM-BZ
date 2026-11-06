@@ -22,7 +22,7 @@ CallTab& CallTab::instance() {
 }
 
 void CallTab::draw() {
-    auto& st = callUI();
+    auto& st = yambz::callUI();
 
     if (!st.show || !st.target.method) {
         ImGui::TextColored(ImVec4(0.5f, 0.5f, 0.5f, 1.0f),
@@ -126,7 +126,7 @@ void CallTab::draw() {
 
 // Global scope: matches Helpers.h declaration
 void yambz_doInvoke() {
-    auto& st = callUI();
+    auto& st = yambz::callUI();
     if (!st.target.method) return;
 
     JavaVM* vm = yambz_getGlobalVM();

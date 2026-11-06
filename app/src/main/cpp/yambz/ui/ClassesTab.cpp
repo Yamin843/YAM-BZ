@@ -303,7 +303,6 @@ void ClassesTab::draw() {
 }
 
 // ─── helper extern (يُربط في jni_class.cpp) ───
-extern void yambz_startEnumFromUI() {
     JavaVM* vm = nullptr;
     // نحصل على VM من الـ thread الحالي
     JNIEnv* env = nullptr;
@@ -319,3 +318,15 @@ extern void yambz_startEnumFromUI() {
 }
 
 } // namespace yambz
+
+// ═══════════════════════════════════════════════════════════
+//  yambz_startEnumFromUI — global definition
+// ═══════════════════════════════════════════════════════════
+void yambz_startEnumFromUI() {
+    JavaVM* vm = yambz_getGlobalVM();
+    if (!vm) return;
+    JNIEnv* env = nullptr;
+    if (vm->GetEnv((void**)&env, JNI_VERSION_1_6) != JNI_OK)
+        vm->AttachCurrentThread(&env, nullptr);
+    yambz::ClassEnumerator::instance().start(env);
+}

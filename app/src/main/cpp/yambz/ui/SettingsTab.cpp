@@ -200,6 +200,10 @@ namespace yambz {
 // ═══════════════════════════════════════════════════════════
 //  GLOBAL helpers (defined once, no weak fallback)
 // ═══════════════════════════════════════════════════════════
+
+// ═══════════════════════════════════════════════════════════
+//  GLOBAL helpers (matches Helpers.h, C++ linkage, ::scope)
+// ═══════════════════════════════════════════════════════════
 bool yambz_showFps() {
     return yambz::settingsShowFps();
 }
