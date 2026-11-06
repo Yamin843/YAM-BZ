@@ -5,6 +5,8 @@
 #include "../core/Logger.h"
 #include <mutex>
 
+#include <jni.h>
+
 namespace yambz {
 
 static JavaVM* g_vm = nullptr;

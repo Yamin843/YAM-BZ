@@ -11,6 +11,8 @@
 #include <imgui_internal.h>
 #include <cstring>
 
+#include <jni.h>
+
 namespace yambz {
 
 CallTab& CallTab::instance() {

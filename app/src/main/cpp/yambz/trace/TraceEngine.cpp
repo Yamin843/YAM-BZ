@@ -4,6 +4,8 @@
 #include "../core/Logger.h"
 #include <mutex>
 
+#include <jni.h>
+
 namespace yambz {
 
 TraceEngine& TraceEngine::instance() {

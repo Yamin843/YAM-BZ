@@ -16,6 +16,8 @@
 #include <chrono>
 #include <cstring>
 
+#include <jni.h>
+
 namespace yambz {
 
 static char s_query[512] = {0};

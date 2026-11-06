@@ -1,6 +1,8 @@
 #include "CallState.h"
 #include "../core/Logger.h"
 
+#include <jni.h>
+
 namespace yambz {
 
 CallUIState& callUI() {

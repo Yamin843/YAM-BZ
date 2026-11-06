@@ -8,6 +8,8 @@
 #include <mutex>
 #include <memory>
 
+#include <jni.h>
+
 namespace yambz {
 
 // ═══════════════════════════════════════════════════════════

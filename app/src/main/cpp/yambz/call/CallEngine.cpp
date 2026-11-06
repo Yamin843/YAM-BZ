@@ -9,6 +9,8 @@
 #include <atomic>
 #include <string>
 
+#include <jni.h>
+
 namespace yambz {
 
 CallEngine& CallEngine::instance() {

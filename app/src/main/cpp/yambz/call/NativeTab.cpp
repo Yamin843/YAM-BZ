@@ -6,6 +6,8 @@
 #include <vector>
 #include <string>
 
+#include <jni.h>
+
 namespace yambz {
 
 NativeTab& NativeTab::instance() {

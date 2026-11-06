@@ -15,6 +15,8 @@
 #include <chrono>
 #include <memory>
 
+#include <jni.h>
+
 namespace yambz {
 
 ClassesTab& ClassesTab::instance() {
