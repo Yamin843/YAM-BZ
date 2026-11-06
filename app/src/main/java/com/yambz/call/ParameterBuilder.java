@@ -1,7 +1,5 @@
 package com.yambz.call;
 
-import android.util.Log;
-
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -10,13 +8,10 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
-import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
+import java.util.Iterator;
 import java.util.Map;
-import java.util.Set;
 
 /**
  * يبني كائنات Java من JSON spec.
@@ -25,23 +20,17 @@ import java.util.Set;
  *   {"k":"null"}
  *   {"k":"int","v":42}  / long / short / byte / bool / char / float / double
  *   {"k":"str","v":"hello"}
- *   {"k":"cls","v":"java.lang.String"}               ← class token
+ *   {"k":"cls","v":"java.lang.String"}
  *   {"k":"enum","cls":"java.lang.Thread$State","v":"RUNNABLE"}
- *   {"k":"array","cls":"java.lang.String[]","items":[spec,...]}
+ *   {"k":"array","cls":"[Ljava.lang.String;","items":[spec,...]}
  *   {"k":"list","cls":"java.util.ArrayList","items":[spec,...]}
  *   {"k":"set","cls":"java.util.HashSet","items":[spec,...]}
- *   {"k":"map","cls":"java.util.LinkedHashMap","entries":[[k_spec,v_spec],...]}
- *   {"k":"obj",
- *     "cls":"com.example.Foo",
- *     "how":"unsafe" | "ctor" | "factory",
- *     "ctor":[spec,...],        ← إذا how=ctor
- *     "factory":"name",         ← إذا how=factory (static, 0 args)
- *     "fields":{"f":spec,...}   ← تُضبط بعد الإنشاء
- *   }
+ *   {"k":"map","cls":"java.util.LinkedHashMap","entries":[[k,v],...]}
+ *   {"k":"proxy","cls":"java.lang.Runnable","strategy":"null"}
+ *   {"k":"subclass","parent":"X","cls":"Y","ctor":[spec,...]}
+ *   {"k":"obj","cls":"com.example.Foo","how":"unsafe|ctor|factory","fields":{...}}
  */
 public final class ParameterBuilder {
-    private static final String TAG = "YAMBZ";
-
     private ParameterBuilder() {}
 
     public static Object build(String json, ClassLoader loader) throws Exception {
@@ -50,20 +39,32 @@ public final class ParameterBuilder {
     }
 
     private static Object buildFrom(JSONObject spec, ClassLoader loader, int depth) throws Exception {
-        if (depth > 64) throw new IllegalArgumentException("nesting too deep (64)");
-        String k = spec.optString("k", "");
+        if (depth > 64) {
+            throw new IllegalArgumentException("nesting too deep (64)");
+        }
+        String kind = spec.optString("k", "");
 
-        switch (k) {
-            case "null":   return null;
-            case "int":    return spec.getInt("v");
-            case "long":   return spec.getLong("v");
-            case "short":  return (short) spec.getInt("v");
-            case "byte":   return (byte) spec.getInt("v");
-            case "char":   return (char) spec.getInt("v");
-            case "bool":   return spec.getBoolean("v");
-            case "float":  return (float) spec.getDouble("v");
-            case "double": return spec.getDouble("v");
-            case "str":    return spec.getString("v");
+        switch (kind) {
+            case "null":
+                return null;
+            case "int":
+                return spec.getInt("v");
+            case "long":
+                return spec.getLong("v");
+            case "short":
+                return (short) spec.getInt("v");
+            case "byte":
+                return (byte) spec.getInt("v");
+            case "char":
+                return (char) spec.getInt("v");
+            case "bool":
+                return spec.getBoolean("v");
+            case "float":
+                return (float) spec.getDouble("v");
+            case "double":
+                return spec.getDouble("v");
+            case "str":
+                return spec.getString("v");
             case "cls": {
                 String cn = spec.getString("v");
                 return loadClass(cn, loader);
@@ -72,7 +73,7 @@ public final class ParameterBuilder {
                 String cn = spec.getString("cls");
                 String en = spec.getString("v");
                 Class<?> c = loadClass(cn, loader);
-                @SuppressWarnings({"rawtypes","unchecked"})
+                @SuppressWarnings({"rawtypes", "unchecked"})
                 Object v = Enum.valueOf((Class<? extends Enum>) c, en);
                 return v;
             }
@@ -92,7 +93,7 @@ public final class ParameterBuilder {
                 String cn = spec.optString("cls", "java.util.ArrayList");
                 Class<?> cls = loadClass(cn, loader);
                 @SuppressWarnings("unchecked")
-                java.util.Collection<Object> c = (java.util.Collection<Object>) newInstance(cls, loader);
+                Collection<Object> c = (Collection<Object>) newInstance(cls);
                 JSONArray items = spec.optJSONArray("items");
                 int n = items == null ? 0 : items.length();
                 for (int i = 0; i < n; i++) {
@@ -104,7 +105,7 @@ public final class ParameterBuilder {
                 String cn = spec.optString("cls", "java.util.LinkedHashSet");
                 Class<?> cls = loadClass(cn, loader);
                 @SuppressWarnings("unchecked")
-                java.util.Collection<Object> c = (java.util.Collection<Object>) newInstance(cls, loader);
+                Collection<Object> c = (Collection<Object>) newInstance(cls);
                 JSONArray items = spec.optJSONArray("items");
                 int n = items == null ? 0 : items.length();
                 for (int i = 0; i < n; i++) {
@@ -116,7 +117,7 @@ public final class ParameterBuilder {
                 String cn = spec.optString("cls", "java.util.LinkedHashMap");
                 Class<?> cls = loadClass(cn, loader);
                 @SuppressWarnings("unchecked")
-                Map<Object,Object> m = (Map<Object,Object>) newInstance(cls, loader);
+                Map<Object, Object> m = (Map<Object, Object>) newInstance(cls);
                 JSONArray entries = spec.optJSONArray("entries");
                 if (entries != null) {
                     for (int i = 0; i < entries.length(); i++) {
@@ -132,23 +133,21 @@ public final class ParameterBuilder {
                 String ifaceName = spec.getString("cls");
                 Class<?> iface = loadClass(ifaceName, loader);
                 String strategy = spec.optString("strategy", "null");
-                // parse const values (very simple: string->string/number)
-                java.util.Map<String, Object> constants = new java.util.HashMap<>();
-                org.json.JSONObject cjs = spec.optJSONObject("constants");
+                Map<String, Object> constants = new HashMap<>();
+                JSONObject cjs = spec.optJSONObject("constants");
                 if (cjs != null) {
-                    java.util.Iterator<String> it = cjs.keys();
+                    Iterator<String> it = cjs.keys();
                     while (it.hasNext()) {
-                        String fldName = it.next();
-                        constants.put(k, cjs.get(k));
+                        String propName = it.next();
+                        constants.put(propName, cjs.get(propName));
                     }
                 }
                 return InterfaceProxyHandler.createProxy(iface, strategy, constants);
             }
             case "subclass": {
-                // {k:"subclass", parent:"X", cls:"Y", args:[...]}
                 String childName = spec.getString("cls");
                 Class<?> child = loadClass(childName, loader);
-                org.json.JSONArray argsJson = spec.optJSONArray("ctor");
+                JSONArray argsJson = spec.optJSONArray("ctor");
                 int argn = argsJson == null ? 0 : argsJson.length();
                 Object[] args = new Object[argn];
                 Class<?>[] argTypes = new Class<?>[argn];
@@ -157,21 +156,23 @@ public final class ParameterBuilder {
                     argTypes[i] = args[i] == null ? Object.class : args[i].getClass();
                 }
                 Constructor<?> ctor = findBestConstructor(child, argTypes);
-                if (ctor == null) throw new NoSuchMethodException("no ctor " + childName);
+                if (ctor == null) {
+                    throw new NoSuchMethodException("no ctor for " + childName);
+                }
                 ctor.setAccessible(true);
                 return ctor.newInstance(args);
             }
             case "obj": {
                 String cn = spec.getString("cls");
                 Class<?> cls = loadClass(cn, loader);
-                String how = spec.optString("how", "unsafe");
-                Object instance = null;
 
-                // Auto-handle interfaces
                 if (cls.isInterface()) {
                     String strategy = spec.optString("strategy", "null");
                     return InterfaceProxyHandler.createProxy(cls, strategy, null);
                 }
+
+                String how = spec.optString("how", "unsafe");
+                Object instance = null;
 
                 if ("ctor".equals(how)) {
                     JSONArray argsJson = spec.optJSONArray("ctor");
@@ -183,71 +184,88 @@ public final class ParameterBuilder {
                         argTypes[i] = args[i] == null ? Object.class : args[i].getClass();
                     }
                     Constructor<?> ctor = findBestConstructor(cls, argTypes);
-                    if (ctor == null) throw new NoSuchMethodException("no ctor " + cn);
+                    if (ctor == null) {
+                        throw new NoSuchMethodException("no matching ctor for " + cn);
+                    }
                     ctor.setAccessible(true);
                     instance = ctor.newInstance(args);
                 } else if ("factory".equals(how)) {
                     String factory = spec.getString("factory");
                     Method fm = findZeroArgStatic(cls, factory);
-                    if (fm == null) throw new NoSuchMethodException("factory " + cn + "." + factory);
+                    if (fm == null) {
+                        throw new NoSuchMethodException("factory " + cn + "." + factory);
+                    }
                     fm.setAccessible(true);
                     instance = fm.invoke(null);
-                } else { // unsafe
+                } else {
                     instance = UnsafeHelper.allocateInstance(cls);
                 }
 
-                // apply fields (correctly scoped loop variable)
                 JSONObject fields = spec.optJSONObject("fields");
                 if (fields != null) {
-                    java.util.Iterator<String> fldIt = fields.keys();
-                    while (fldIt.hasNext()) {
-                        String fieldName = fldIt.next();
-                        JSONObject fspec = fields.getJSONObject(fieldName);
-                        Object fval = buildFrom(fspec, loader, depth + 1);
-                        setField(instance, cls, fieldName, fval);
+                    Iterator<String> fldIterator = fields.keys();
+                    while (fldIterator.hasNext()) {
+                        String fldNameLocal = fldIterator.next();
+                        JSONObject fldSpec = fields.getJSONObject(fldNameLocal);
+                        Object fldValue = buildFrom(fldSpec, loader, depth + 1);
+                        setField(instance, cls, fldNameLocal, fldValue);
                     }
-                }
                 }
                 return instance;
             }
             default:
-                throw new IllegalArgumentException("unknown kind: " + k);
+                throw new IllegalArgumentException("unknown kind: " + kind);
         }
     }
 
-    // ─── helpers ───
     static Class<?> loadClass(String name, ClassLoader loader) throws ClassNotFoundException {
-        // primitive names
         switch (name) {
-            case "int":     return int.class;
-            case "long":    return long.class;
-            case "short":   return short.class;
-            case "byte":    return byte.class;
-            case "char":    return char.class;
-            case "boolean": return boolean.class;
-            case "float":   return float.class;
-            case "double":  return double.class;
-            case "void":    return void.class;
+            case "int":
+                return int.class;
+            case "long":
+                return long.class;
+            case "short":
+                return short.class;
+            case "byte":
+                return byte.class;
+            case "char":
+                return char.class;
+            case "boolean":
+                return boolean.class;
+            case "float":
+                return float.class;
+            case "double":
+                return double.class;
+            case "void":
+                return void.class;
+            default:
+                break;
         }
-        // array syntax: [I, [Ljava.lang.String;, etc.
         if (name.startsWith("[")) {
             return Class.forName(name, false, loader);
         }
-        // "Type[]" syntax
         if (name.endsWith("[]")) {
-            Class<?> c = loadClass(name.substring(0, name.length()-2), loader);
+            Class<?> c = loadClass(name.substring(0, name.length() - 2), loader);
             return Array.newInstance(c, 0).getClass();
         }
-        try { return Class.forName(name, false, loader); } catch (Throwable ignored) {}
-        try { return Class.forName(name, false, null); } catch (Throwable ignored) {}
-        // try from app loader
+        try {
+            return Class.forName(name, false, loader);
+        } catch (Throwable ignored) {
+        }
+        try {
+            return Class.forName(name, false, null);
+        } catch (Throwable ignored) {
+        }
         for (ClassLoader l : qing.albatross.core.Albatross.getClassLoaderList()) {
-            try { return Class.forName(name, false, l); } catch (Throwable ignored) {}
+            try {
+                return Class.forName(name, false, l);
+            } catch (Throwable ignored) {
+            }
         }
         throw new ClassNotFoundException(name);
     }
 
-    static Object newInstance(Class<?> cls, ClassLoader loader) throws Exception {
+    static Object newInstance(Class<?> cls) throws Exception {
         try {
             Constructor<?> c = cls.getDeclaredConstructor();
             c.setAccessible(true);
@@ -260,30 +278,45 @@ public final class ParameterBuilder {
     static Constructor<?> findBestConstructor(Class<?> cls, Class<?>[] argTypes) {
         Constructor<?>[] ctors = cls.getDeclaredConstructors();
         for (Constructor<?> c : ctors) {
-            if (c.getParameterCount() != argTypes.length) continue;
+            if (c.getParameterCount() != argTypes.length) {
+                continue;
+            }
             Class<?>[] p = c.getParameterTypes();
             boolean ok = true;
             for (int i = 0; i < p.length; i++) {
-                if (argTypes[i] == Object.class) continue; // null
-                if (!isWideningOk(p[i], argTypes[i])) { ok = false; break; }
+                if (argTypes[i] == Object.class) {
+                    continue;
+                }
+                if (!isWideningOk(p[i], argTypes[i])) {
+                    ok = false;
+                    break;
+                }
             }
-            if (ok) return c;
+            if (ok) {
+                return c;
+            }
         }
         return null;
     }
 
     static boolean isWideningOk(Class<?> param, Class<?> arg) {
-        if (param == arg) return true;
+        if (param == arg) {
+            return true;
+        }
         if (param.isPrimitive() || arg.isPrimitive()) {
-            // boxed
-            Class<?> pBox = box(param), aBox = box(arg);
-            if (pBox == aBox) return true;
+            Class<?> pBox = box(param);
+            Class<?> aBox = box(arg);
+            if (pBox == aBox) {
+                return true;
+            }
         }
         return param.isAssignableFrom(arg);
     }
 
     static Class<?> box(Class<?> c) {
-        if (!c.isPrimitive()) return c;
+        if (!c.isPrimitive()) {
+            return c;
+        }
         if (c == int.class)     return Integer.class;
         if (c == long.class)    return Long.class;
         if (c == short.class)   return Short.class;
@@ -297,8 +330,11 @@ public final class ParameterBuilder {
 
     static Method findZeroArgStatic(Class<?> cls, String name) {
         for (Method m : cls.getDeclaredMethods()) {
-            if (m.getName().equals(name) && Modifier.isStatic(m.getModifiers())
-                && m.getParameterCount() == 0) return m;
+            if (m.getName().equals(name)
+                    && Modifier.isStatic(m.getModifiers())
+                    && m.getParameterCount() == 0) {
+                return m;
+            }
         }
         return null;
     }
@@ -306,15 +342,20 @@ public final class ParameterBuilder {
     static void setField(Object instance, Class<?> cls, String fname, Object value) throws Exception {
         Field f = null;
         for (Class<?> c = cls; c != null && c != Object.class; c = c.getSuperclass()) {
-            try { f = c.getDeclaredField(fname); break; } catch (Throwable ignored) {}
+            try {
+                f = c.getDeclaredField(fname);
+                break;
+            } catch (Throwable ignored) {
+            }
         }
-        if (f == null) throw new NoSuchFieldException(fname);
+        if (f == null) {
+            throw new NoSuchFieldException(fname);
+        }
         boolean isStatic = Modifier.isStatic(f.getModifiers());
         try {
             f.setAccessible(true);
             f.set(isStatic ? null : instance, value);
         } catch (Throwable t) {
-            // hidden API fallback
             UnsafeHelper.putField(instance, f, value);
         }
     }
