@@ -50,9 +50,9 @@ file(GLOB_RECURSE YAMBZ_CPP
 add_library(yambz SHARED ${YAMBZ_CPP})
 
 target_include_directories(yambz PRIVATE
+    ${ALBATROSS_INCLUDE}
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/yambz
-    ${ALBATROSS_INCLUDE}
     ${IMGUI_DIR}
     ${IMGUI_DIR}/backends
 )

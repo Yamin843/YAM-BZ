@@ -1,3 +1,4 @@
+#include <jni.h>
 //
 // Created by QingWan on 24-5-15.
 //

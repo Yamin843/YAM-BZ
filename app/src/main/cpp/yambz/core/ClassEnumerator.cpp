@@ -1,5 +1,4 @@
 #include "ClassEnumerator.h"
-#include <vector>
 #include "Logger.h"
 
 #include <thread>
@@ -8,25 +7,32 @@
 
 namespace yambz {
 
+// ═══════════════════════════════════════════════════════════
+//  Static thread worker — declared BEFORE start() uses it
+// ═══════════════════════════════════════════════════════════
+static void classEnumWorkerThread(ClassEnumerator* self);
+
 ClassEnumerator& ClassEnumerator::instance() {
     static ClassEnumerator e;
     return e;
 }
 
-// ─── helper: JNI local frame (يمنع تراكم 2000 ref) ───
+// ═══════════════════════════════════════════════════════════
+//  Helper: JNI local frame
+// ═══════════════════════════════════════════════════════════
 struct JniFrame {
     JNIEnv* env;
-    jint    capacity;
-    JniFrame(JNIEnv* e, jint c = 64) : env(e), capacity(c) {
+    JniFrame(JNIEnv* e, jint capacity = 64) : env(e) {
         env->PushLocalFrame(capacity);
     }
     ~JniFrame() { env->PopLocalFrame(nullptr); }
 };
 
-// ─── helper: split name → package + simpleName ───
+// ═══════════════════════════════════════════════════════════
+//  Helper: split name into package + simpleName
+// ═══════════════════════════════════════════════════════════
 static void splitName(const std::string& full,
                       std::string& outPkg, std::string& outSimple) {
-    // نأخذ آخر '.' ليس داخل []
     size_t pos = full.rfind('.');
     if (pos == std::string::npos) {
         outPkg.clear();
@@ -35,29 +41,28 @@ static void splitName(const std::string& full,
         outPkg = full.substr(0, pos);
         outSimple = full.substr(pos + 1);
     }
-    // إزالة $Prefix للـ simpleName
     size_t dollar = outSimple.rfind('$');
     if (dollar != std::string::npos && dollar + 1 < outSimple.size()) {
         outSimple = outSimple.substr(dollar + 1);
     }
 }
 
-// ─── helper: batch pull from Java helper ───
-// Java helper API:
-//   static boolean hasNextBatch()
-//   static String[] nextBatch(int maxSize)   ← يرجع أسماء كلاسات
+// ═══════════════════════════════════════════════════════════
+//  Helper: pull batch from Java
+// ═══════════════════════════════════════════════════════════
 static std::vector<std::string> pullBatch(JNIEnv* env, jobject helper, int maxSize) {
     std::vector<std::string> out;
     if (!helper) return out;
 
     jclass cls = env->GetObjectClass(helper);
     jmethodID mid = env->GetMethodID(cls, "nextBatch", "(I)[Ljava/lang/String;");
-    if (!mid) return out;
+    if (!mid) {
+        env->ExceptionClear();
+        return out;
+    }
 
-    jstring jempty = nullptr;
     jobjectArray arr = (jobjectArray) env->CallObjectMethod(helper, mid, maxSize);
     if (env->ExceptionCheck()) {
-        env->ExceptionDescribe();
         env->ExceptionClear();
         return out;
     }
@@ -79,6 +84,9 @@ static std::vector<std::string> pullBatch(JNIEnv* env, jobject helper, int maxSi
     return out;
 }
 
+// ═══════════════════════════════════════════════════════════
+//  start() — spawn static thread
+// ═══════════════════════════════════════════════════════════
 void ClassEnumerator::start(JNIEnv* env) {
     if (m_running.exchange(true)) {
         LOGI("ClassEnumerator: already running");
@@ -90,24 +98,54 @@ void ClassEnumerator::start(JNIEnv* env) {
 
     env->GetJavaVM(&m_vm);
 
-    // احصل على ClassBridge.getInstance() global ref
+    // Find ClassBridge.getInstance()
     jclass cls = env->FindClass("com/yambz/bridge/ClassBridge");
     if (!cls) {
-        LOGE("ClassBridge not found");
+        env->ExceptionClear();
+        LOGE("ClassBridge class not found");
         m_running.store(false);
         return;
     }
     jmethodID mid = env->GetStaticMethodID(cls, "getInstance",
-                                            "()Lcom/yambz/bridge/ClassBridge;");
+                                           "()Lcom/yambz/bridge/ClassBridge;");
+    if (!mid) {
+        env->ExceptionClear();
+        LOGE("ClassBridge.getInstance not found");
+        m_running.store(false);
+        return;
+    }
     jobject local = env->CallStaticObjectMethod(cls, mid);
-    if (local) m_javaHelper = env->NewGlobalRef(local);
+    if (local) {
+        m_javaHelper = env->NewGlobalRef(local);
+        env->DeleteLocalRef(local);
+    }
 
-    std::thread staticThreadWorker(this);
-    staticThreadWorker.detach();
+    LOGI("ClassEnumerator: starting worker thread");
 
-    LOGI("ClassEnumerator: started");
+    // Spawn static worker (no lambda)
+    std::thread th(classEnumWorkerThread, this);
+    th.detach();
 }
 
+// ═══════════════════════════════════════════════════════════
+//  Static worker implementation — declared at top of file
+// ═══════════════════════════════════════════════════════════
+static void classEnumWorkerThread(ClassEnumerator* self) {
+    JNIEnv* env = nullptr;
+    JavaVM* vm = self->vmPtr();
+    if (!vm) {
+        return;
+    }
+    if (vm->AttachCurrentThread(&env, nullptr) != JNI_OK) {
+        return;
+    }
+    self->runWorkerMain(env);
+    vm->DetachCurrentThread();
+}
+
+// ═══════════════════════════════════════════════════════════
+//  workerMain — actual enumeration loop
+// ═══════════════════════════════════════════════════════════
 void ClassEnumerator::workerMain(JNIEnv* env) {
     constexpr int BATCH = 1000;
     size_t total = 0;
@@ -139,7 +177,7 @@ void ClassEnumerator::workerMain(JNIEnv* env) {
         }
     }
 
-    // فرز حسب name (lowercase) — يسرّع البحث لاحقاً
+    // Sort by name
     {
         std::lock_guard<std::mutex> lk(m_mu);
         std::sort(m_classes.begin(), m_classes.end(),
@@ -162,7 +200,6 @@ void ClassEnumerator::cancel() {
 
 float ClassEnumerator::progress() const {
     if (m_complete.load()) return 1.0f;
-    // لا يمكن معرفة المجموع — نستخدم تقريب
     uint32_t b = m_loadedBatches.load();
     return std::min(1.0f, (float) b / 200.0f);
 }
@@ -172,7 +209,6 @@ std::shared_ptr<const std::vector<ClassInfo>> ClassEnumerator::snapshot() const 
     return std::make_shared<const std::vector<ClassInfo>>(m_classes);
 }
 
-// ─── member enumeration ───
 const std::vector<MemberInfo>& ClassEnumerator::membersOf(size_t classIdx) {
     {
         std::lock_guard<std::mutex> lk(m_membersMu);
@@ -180,7 +216,6 @@ const std::vector<MemberInfo>& ClassEnumerator::membersOf(size_t classIdx) {
         if (it != m_membersCache.end()) return it->second;
     }
 
-    // جلب عبر Java helper
     std::vector<MemberInfo> result;
     if (m_javaHelper && m_vm) {
         JNIEnv* env = nullptr;
@@ -188,33 +223,31 @@ const std::vector<MemberInfo>& ClassEnumerator::membersOf(size_t classIdx) {
             m_vm->AttachCurrentThread(&env, nullptr);
         }
 
-        std::lock_guard<std::mutex> lk(m_mu);
-        if (classIdx >= m_classes.size()) return result;
-        const auto& ci = m_classes[classIdx];
+        std::string className;
+        {
+            std::lock_guard<std::mutex> lk(m_mu);
+            if (classIdx >= m_classes.size()) return result;
+            className = m_classes[classIdx].fullName;
+        }
 
         jclass cls = env->GetObjectClass(m_javaHelper);
         jmethodID mid = env->GetMethodID(cls, "getMembers",
             "(Ljava/lang/String;)[Ljava/lang/String;");
         if (mid) {
-            jstring jname = env->NewStringUTF(ci.fullName.c_str());
+            jstring jname = env->NewStringUTF(className.c_str());
             jobjectArray arr = (jobjectArray) env->CallObjectMethod(m_javaHelper, mid, jname);
             env->DeleteLocalRef(jname);
             if (env->ExceptionCheck()) {
-                env->ExceptionDescribe();
                 env->ExceptionClear();
             } else if (arr) {
                 jsize len = env->GetArrayLength(arr);
                 result.reserve(len);
-                // الشكل: "M|public|name|(sig)V|retType"
-                //       "F|private|name|L...;|"
-                //       "C|public|name|(args)V|"
                 for (jsize i = 0; i < len; i++) {
                     auto js = (jstring) env->GetObjectArrayElement(arr, i);
                     const char* c = env->GetStringUTFChars(js, nullptr);
                     if (c) {
                         std::string s(c);
                         env->ReleaseStringUTFChars(js, c);
-                        // parse
                         size_t p1 = s.find('|');
                         size_t p2 = s.find('|', p1 + 1);
                         size_t p3 = s.find('|', p2 + 1);
