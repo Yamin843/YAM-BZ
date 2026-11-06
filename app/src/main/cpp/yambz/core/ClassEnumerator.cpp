@@ -9,6 +9,7 @@
 #include <memory>
 
 #include <jni.h>
+#include "core/ClassTypes.h"
 
 namespace yambz {
 

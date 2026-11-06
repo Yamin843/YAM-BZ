@@ -143,6 +143,7 @@ void yambz_openCallFor(uint32_t classIdx) {
 #include "call/HeapPickerUI.h"
 #include "call/Presets.h"
 #include "call/History.h"
+#include "core/ClassTypes.h"
 
 void yambz_openHeapPicker(const char* type) {
     auto& ui = yambz::heapPickerUI();

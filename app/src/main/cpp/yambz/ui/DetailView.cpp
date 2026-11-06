@@ -2,6 +2,7 @@
 #include "Theme.h"
 #include "../core/ClassEnumerator.h"
 #include <imgui.h>
+#include "core/ClassTypes.h"
 
 namespace yambz {
 
