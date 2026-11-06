@@ -11,6 +11,8 @@
 #include "call/Presets.h"
 #include "call/History.h"
 #include "ui/Notifications.h"
+#include "core/ClassEnumerator.h"
+#include "core/ClassTypes.h"
 
 using namespace yambz;
 
