@@ -193,9 +193,9 @@ void SettingsTab::draw() {
     int  settingsObjectDumpDepth(){ return g_settings.objectDumpDepth; }
 } // namespace yambz
 
-// ===============================================================
+// ═══════════════════════════════════════════════════════════
 //  GLOBAL helpers (C++ linkage, matching Helpers.h)
-// ===============================================================
+// ═══════════════════════════════════════════════════════════
 bool yambz_showFps() {
     return yambz::settingsShowFps();
 }
