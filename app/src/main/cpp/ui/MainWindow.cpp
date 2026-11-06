@@ -15,6 +15,10 @@
 #include <cmath>
 #include <mutex>
 
+// Global helper defined in jni/jni_ui.cpp
+void yambz_requestClosePanel();
+
+
 namespace yambz {
 
 struct MainWindow::ImplState {
@@ -122,7 +126,6 @@ void MainWindow::drawMain() {
     if (ImGui::Button("X", ImVec2(32, 32))) {
         hide();
         // Notify Java to hide panel
-        extern void yambz_requestClosePanel();
         yambz_requestClosePanel();
     }
     ImGui::PopStyleVar();

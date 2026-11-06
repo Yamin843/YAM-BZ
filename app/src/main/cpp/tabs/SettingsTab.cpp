@@ -201,6 +201,11 @@ void SettingsTab::draw() {
     }
 }
 
+
+bool SettingsTab::isFpsEnabled() const {
+    return st().showFps;
+}
+
 } // namespace yambz
 
 // ═══════════════════════════════════════════════════════════
