@@ -127,4 +127,4 @@ void PanelManager::hide() {
 } // namespace yambz
 
 // Global scope: matches Helpers.h declaration
-void panel_setJavaVM(JavaVM* vm) { g_vm_p = vm; }
+void panel_setJavaVM(JavaVM* vm) { yambz::g_vm_p = vm; }

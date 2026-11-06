@@ -186,28 +186,15 @@ void SettingsTab::draw() {
     (void)changed;
 }
 
-} // namespace yambz
 
-// ═══════════════════════════════════════════════════════════
-//  Settings accessors INSIDE namespace (can reach g_settings)
-// ═══════════════════════════════════════════════════════════
-namespace yambz {
+    // Accessors for global helpers
     bool settingsShowFps()        { return g_settings.showFps; }
     int  settingsBacktraceDepth() { return g_settings.graphDepth; }
     int  settingsObjectDumpDepth(){ return g_settings.objectDumpDepth; }
-}
-
-// ═══════════════════════════════════════════════════════════
-//  GLOBAL helpers (defined once, no weak fallback)
-// ═══════════════════════════════════════════════════════════
-
-// ═══════════════════════════════════════════════════════════
-//  GLOBAL helpers (matches Helpers.h, C++ linkage, ::scope)
-// ═══════════════════════════════════════════════════════════
+} // namespace yambz
 
 // ===============================================================
-//  GLOBAL helpers — match Helpers.h (C++ linkage, ::scope)
-//  These call namespace accessors which reach the static g_settings
+//  GLOBAL helpers (C++ linkage, matching Helpers.h)
 // ===============================================================
 bool yambz_showFps() {
     return yambz::settingsShowFps();

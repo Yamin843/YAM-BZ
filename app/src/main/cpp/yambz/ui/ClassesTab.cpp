@@ -319,9 +319,9 @@ void ClassesTab::draw() {
 
 } // namespace yambz
 
-// ═══════════════════════════════════════════════════════════
-//  yambz_startEnumFromUI — global definition
-// ═══════════════════════════════════════════════════════════
+// ===============================================================
+//  Global helper: matches Helpers.h declaration
+// ===============================================================
 void yambz_startEnumFromUI() {
     JavaVM* vm = yambz_getGlobalVM();
     if (!vm) return;

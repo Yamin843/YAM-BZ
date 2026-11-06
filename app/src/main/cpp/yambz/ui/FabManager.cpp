@@ -129,4 +129,4 @@ void FabManager::onFabTapped() {
 } // namespace yambz
 
 // Global scope: matches Helpers.h declaration
-void fab_setJavaVM(JavaVM* vm) { g_vm = vm; }
+void fab_setJavaVM(JavaVM* vm) { yambz::g_vm = vm; }
