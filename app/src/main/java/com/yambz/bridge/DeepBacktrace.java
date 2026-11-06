@@ -227,4 +227,25 @@ public final class DeepBacktrace {
     }
 
     private static native void nativeOnComplete(String json);
+
+    /**
+     * One-shot synchronous capture: starts, waits, stops, returns JSON.
+     * Blocks caller for durationMs + 100ms. Use sparingly.
+     */
+    public static synchronized String captureSnapshot(int durationMs, int maxFrames) {
+        if (sActive) {
+            return exportJson();  // already running
+        }
+        if (!start(durationMs, maxFrames)) {
+            return "[]";
+        }
+        try {
+            Thread.sleep(durationMs + 100);
+        } catch (InterruptedException ignore) {}
+        synchronized (DeepBacktrace.class) {
+            // stop() calls nativeOnComplete + resets sActive
+            if (sActive) stop();
+        }
+        return exportJson();
+    }
 }

@@ -134,7 +134,7 @@ static void callEngineWorker(JavaVM* vm, jobject methodG,
         g_rawResult = res;
     }
     g_rawRunning.store(false);
-    yambz::LOGI("CallEngine: %s → %s in %ldms",
+    LOGI("CallEngine: %s → %s in %ldms",
                 methodDesc.c_str(), res.success ? "OK" : "FAIL", res.elapsedMs);
 
     vm->DetachCurrentThread();

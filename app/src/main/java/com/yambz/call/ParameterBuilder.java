@@ -31,11 +31,21 @@ import java.util.Map;
  *   {"k":"obj","cls":"com.example.Foo","how":"unsafe|ctor|factory","fields":{...}}
  */
 public final class ParameterBuilder {
+    // Thread-local map: object id → constructed instance (for circular refs)
+    private static final ThreadLocal<java.util.Map<String, Object>> sIdMap =
+        ThreadLocal.withInitial(java.util.HashMap::new);
+
     private ParameterBuilder() {}
 
     public static Object build(String json, ClassLoader loader) throws Exception {
-        JSONObject spec = new JSONObject(json);
-        return buildFrom(spec, loader, 0);
+        java.util.Map<String, Object> idMap = sIdMap.get();
+        idMap.clear();
+        try {
+            JSONObject spec = new JSONObject(json);
+            return buildFrom(spec, loader, 0);
+        } finally {
+            idMap.clear();
+        }
     }
 
     private static Object buildFrom(JSONObject spec, ClassLoader loader, int depth) throws Exception {
@@ -166,9 +176,14 @@ public final class ParameterBuilder {
                 String cn = spec.getString("cls");
                 Class<?> cls = loadClass(cn, loader);
 
-                if (cls.isInterface()) {
+                if (cls.isInterface() || Modifier.isAbstract(cls.getModifiers())) {
                     String strategy = spec.optString("strategy", "null");
-                    return InterfaceProxyHandler.createProxy(cls, strategy, null);
+                    try {
+                        return AbstractHelper.instantiate(cls, loader, strategy);
+                    } catch (Throwable t) {
+                        throw new IllegalArgumentException(
+                            "cannot instantiate " + cls.getName() + ": " + t.getMessage());
+                    }
                 }
 
                 String how = spec.optString("how", "unsafe");
@@ -201,6 +216,11 @@ public final class ParameterBuilder {
                     instance = UnsafeHelper.allocateInstance(cls);
                 }
 
+                // Register for circular refs BEFORE populating fields
+                String objId = spec.optString("id", null);
+                if (objId != null && !objId.isEmpty()) {
+                    sIdMap.get().put(objId, instance);
+                }
                 JSONObject fields = spec.optJSONObject("fields");
                 if (fields != null) {
                     Iterator<String> fldIterator = fields.keys();
@@ -212,6 +232,25 @@ public final class ParameterBuilder {
                     }
                 }
                 return instance;
+            }
+            case "ref": {
+                String refId = spec.getString("id");
+                Object existing = sIdMap.get().get(refId);
+                if (existing == null) {
+                    throw new IllegalArgumentException("undefined ref: " + refId);
+                }
+                return existing;
+            }
+            case "varargs": {
+                JSONArray items = spec.optJSONArray("items");
+                String componentType = spec.optString("componentType", "java.lang.Object");
+                Class<?> compCls = loadClass(componentType, loader);
+                int n = items == null ? 0 : items.length();
+                Object arr = Array.newInstance(compCls, n);
+                for (int i = 0; i < n; i++) {
+                    Array.set(arr, i, buildFrom(items.getJSONObject(i), loader, depth + 1));
+                }
+                return arr;
             }
             default:
                 throw new IllegalArgumentException("unknown kind: " + kind);
