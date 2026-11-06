@@ -1,11 +1,11 @@
 #include "HeapPicker.h"
-#include <algorithm>
 #include "../core/Logger.h"
 #include "../core/ErrorContext.h"
 
 #include <jni.h>
 #include <mutex>
 #include <vector>
+#include <algorithm>
 
 namespace yambz {
 
@@ -29,6 +29,94 @@ static JavaVM* getVM() {
     return yambz_getGlobalVM();
 }
 
+// ═══════════════════════════════════════════════════════════
+//  Static worker — no lambdas, no captures issues
+// ═══════════════════════════════════════════════════════════
+static void doSearchOnThread(HeapPicker* hp, JavaVM* vm, std::string typeName) {
+    JNIEnv* env = nullptr;
+    if (vm->AttachCurrentThread(&env, nullptr) != JNI_OK) {
+        hp->onError(nullptr, nullptr);
+        return;
+    }
+
+    // 1) Find java.lang.Class
+    jclass cls_Class = env->FindClass("java/lang/Class");
+    if (!cls_Class) {
+        env->ExceptionClear();
+        hp->onError(nullptr, nullptr);
+        vm->DetachCurrentThread();
+        return;
+    }
+
+    jmethodID mid_forName = env->GetStaticMethodID(cls_Class, "forName",
+        "(Ljava/lang/String;)Ljava/lang/Class;");
+    if (!mid_forName) {
+        env->ExceptionClear();
+        hp->onError(nullptr, nullptr);
+        vm->DetachCurrentThread();
+        return;
+    }
+
+    jstring jn = env->NewStringUTF(typeName.c_str());
+    jobject jcls = env->CallStaticObjectMethod(cls_Class, mid_forName, jn);
+    env->DeleteLocalRef(jn);
+
+    if (!jcls || env->ExceptionCheck()) {
+        env->ExceptionClear();
+        hp->onError(nullptr, nullptr);
+        vm->DetachCurrentThread();
+        return;
+    }
+
+    // 2) Find HeapScanner class
+    jclass cls_HS = env->FindClass("com/yambz/call/HeapScanner");
+    if (!cls_HS) {
+        env->ExceptionClear();
+        env->DeleteLocalRef(jcls);
+        hp->onError(nullptr, nullptr);
+        vm->DetachCurrentThread();
+        return;
+    }
+
+    jmethodID mid_start = env->GetStaticMethodID(cls_HS, "start",
+        "(Ljava/lang/Class;Lcom/yambz/call/HeapScanner$Callback;)Lcom/yambz/call/HeapScanner;");
+    if (!mid_start) {
+        env->ExceptionClear();
+        env->DeleteLocalRef(jcls);
+        hp->onError(nullptr, nullptr);
+        vm->DetachCurrentThread();
+        return;
+    }
+
+    // 3) Create callback
+    jclass cls_NC = env->FindClass("com/yambz/call/HeapScannerCallback");
+    if (!cls_NC) {
+        env->ExceptionClear();
+        env->DeleteLocalRef(jcls);
+        hp->onError(nullptr, nullptr);
+        vm->DetachCurrentThread();
+        return;
+    }
+    jmethodID mid_ctor = env->GetMethodID(cls_NC, "<init>", "()V");
+    if (!mid_ctor) {
+        env->ExceptionClear();
+        env->DeleteLocalRef(jcls);
+        hp->onError(nullptr, nullptr);
+        vm->DetachCurrentThread();
+        return;
+    }
+
+    jobject cb = env->NewObject(cls_NC, mid_ctor);
+
+    // 4) Call HeapScanner.start
+    env->CallStaticObjectMethod(cls_HS, mid_start, jcls, cb);
+
+    env->DeleteLocalRef(cb);
+    env->DeleteLocalRef(jcls);
+
+    vm->DetachCurrentThread();
+}
+
 void HeapPicker::startSearch(const std::string& typeName) {
     if (m_searching.exchange(true)) {
         LOGW("HeapPicker: already searching");
@@ -42,53 +130,27 @@ void HeapPicker::startSearch(const std::string& typeName) {
     }
     m_seen.store(0);
 
-    std::thread([this, typeName]() {
-        JavaVM* vm = getVM();
-        if (!vm) { m_searching.store(false); return; }
-        JNIEnv* env = nullptr;
-        if (vm->AttachCurrentThread(&env, nullptr) != JNI_OK) {
-            m_searching.store(false);
-            return;
-        }
+    JavaVM* vm = getVM();
+    if (!vm) {
+        m_searching.store(false);
+        return;
+    }
 
-        // find class
-        jclass cls_Class = env->FindClass("java/lang/Class");
-        jmethodID mid_forName = env->GetStaticMethodID(cls_Class, "forName",
-            "(Ljava/lang/String;)Ljava/lang/Class;");
-        jstring jn = env->NewStringUTF(typeName.c_str());
-        jobject jcls = env->CallStaticObjectMethod(cls_Class, mid_forName, jn);
-        env->DeleteLocalRef(jn);
-        if (!jcls) {
-            env->ExceptionClear();
-            m_searching.store(false);
-            vm->DetachCurrentThread();
-            return;
-        }
-
-        // call HeapScanner.start
-        jclass cls_HS = env->FindClass("com/yambz/call/HeapScanner");
-        jmethodID mid_start = env->GetStaticMethodID(cls_HS, "start",
-            "(Ljava/lang/Class;Lcom/yambz/call/HeapScanner$Callback;)Lcom/yambz/call/HeapScanner;");
-        // نحتاج Callback impl — نستخدم NativeCallback.java
-        jclass cls_NC = env->FindClass("com/yambz/call/HeapScannerCallback");
-        jmethodID mid_ctor = env->GetMethodID(cls_NC, "<init>", "()V");
-        jobject cb = env->NewObject(cls_NC, mid_ctor);
-        env->CallStaticObjectMethod(cls_HS, mid_start, jcls, cb);
-
-        env->DeleteLocalRef(cb);
-        env->DeleteLocalRef(jcls);
-
-        vm->DetachCurrentThread();
-    }).detach();
+    // No lambda — just thread with function + args
+    std::thread t(doSearchOnThread, this, vm, typeName);
+    t.detach();
 }
 
+// remaining methods same as before...
 void HeapPicker::cancel() {
     JavaVM* vm = getVM();
     if (!vm) return;
     JNIEnv* env = nullptr;
-    if (vm->GetEnv((void**)&env, JNI_VERSION_1_6) != JNI_OK)
+    if (vm->GetEnv((void**)&env, JNI_VERSION_1_6) != JNI_OK) {
         vm->AttachCurrentThread(&env, nullptr);
+    }
     jclass cls_NC = env->FindClass("com/yambz/call/HeapScannerCallback");
+    if (!cls_NC) { env->ExceptionClear(); return; }
     jmethodID mid = env->GetStaticMethodID(cls_NC, "cancelCurrent", "()V");
     if (mid) env->CallStaticVoidMethod(cls_NC, mid);
     m_searching.store(false);
@@ -100,7 +162,6 @@ void HeapPicker::pushBatch(JNIEnv* env, jobjectArray entries) {
     std::lock_guard<std::mutex> lk(m_state->mu);
     m_state->entries.reserve(m_state->entries.size() + n);
 
-    // كل entry هو Object[] {int idx, long addr, String display, Object ref}
     for (jsize i = 0; i < n; i++) {
         jobject entry = env->GetObjectArrayElement(entries, i);
         if (!entry) continue;
@@ -145,7 +206,7 @@ void HeapPicker::onComplete(int total) {
 void HeapPicker::onError(JNIEnv* env, jobject throwable) {
     m_searching.store(false);
     std::string msg = "unknown";
-    if (throwable) {
+    if (env && throwable) {
         jclass cls_T = env->FindClass("java/lang/Throwable");
         jmethodID mid_toStr = env->GetMethodID(cls_T, "toString", "()Ljava/lang/String;");
         jstring js = (jstring) env->CallObjectMethod(throwable, mid_toStr);
@@ -170,8 +231,7 @@ std::vector<HeapEntry> HeapPicker::snapshot(size_t offset, size_t limit) const {
     if (offset >= n) return out;
     size_t end = std::min(n, offset + limit);
     out.reserve(end - offset);
-    for (size_t i = offset; i < end; i++)
-        out.push_back(m_state->entries[i]);
+    for (size_t i = offset; i < end; i++) out.push_back(m_state->entries[i]);
     return out;
 }
 

@@ -1,4 +1,4 @@
-name: Build YAM-BZ
+name: Build YAM-BZ (.so only)
 
 on:
   push:
@@ -14,7 +14,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup JDK 21 (latest LTS)
+      - name: Setup JDK 21 (LTS)
         uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -25,81 +25,62 @@ jobs:
         with:
           gradle-version: '8.7'
 
-      - name: Install Android SDK (manual — avoids setup-android bug)
+      - name: Install Android SDK (manual)
         run: |
           set -e
           SDK_DIR="$HOME/android-sdk"
           mkdir -p "$SDK_DIR/cmdline-tools"
           cd "$SDK_DIR/cmdline-tools"
-          
-          echo "Downloading cmdline-tools..."
           curl -sSL -o cmdline.zip "https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip"
           unzip -q cmdline.zip
           mv cmdline-tools latest
           rm cmdline.zip
-          
           export ANDROID_HOME="$SDK_DIR"
           export ANDROID_SDK_ROOT="$SDK_DIR"
           export PATH="$SDK_DIR/cmdline-tools/latest/bin:$PATH"
-          
-          echo "Accepting licenses..."
           yes | sdkmanager --licenses > /dev/null 2>&1 || true
-          
-          echo "Installing SDK components..."
           yes | sdkmanager --install \
             "platform-tools" \
             "platforms;android-34" \
             "build-tools;34.0.0" \
             "ndk;27.2.12479018" \
             "cmake;3.22.1"
-          
           echo "ANDROID_HOME=$SDK_DIR" >> $GITHUB_ENV
           echo "ANDROID_SDK_ROOT=$SDK_DIR" >> $GITHUB_ENV
           echo "$SDK_DIR/cmdline-tools/latest/bin" >> $GITHUB_PATH
           echo "$SDK_DIR/platform-tools" >> $GITHUB_PATH
-          
-          echo "✅ SDK installed"
 
-      - name: Verify SDK
-        run: |
-          echo "ANDROID_HOME: $ANDROID_HOME"
-          echo "NDK versions:"
-          ls "$ANDROID_HOME/ndk/" || true
-          echo "Platforms:"
-          ls "$ANDROID_HOME/platforms/" || true
-          echo "CMake:"
-          ls "$ANDROID_HOME/cmake/" || true
-          echo "Java:"
-          java -version
-
-      - name: Fetch ImGui v1.93.0
+      - name: Fetch ImGui
         run: bash scripts/fetch_imgui.sh
 
       - name: Generate embed stubs (pass 1)
         run: bash scripts/gen_embed_stubs.sh
 
-      - name: Build Pass 1 (produce dex + APK)
+      - name: Build Pass 1 (produce dex — internal APK)
         run: gradle :app:assembleRelease --stacktrace --no-daemon
 
-      - name: Embed assets (dex + albatross so)
+      - name: Embed assets
         run: bash scripts/embed_assets.sh
 
-      - name: Build Pass 2 (final .so with embedded)
+      - name: Build Pass 2 (final .so)
         run: |
           gradle clean
           gradle :app:assembleRelease --stacktrace --no-daemon
 
-      - name: Collect artifacts
+      - name: Collect .so ONLY (no APK)
         run: |
           mkdir -p artifacts
+          # Find libyambz.so
           find app/build -name "libyambz.so" -exec cp {} artifacts/ \; 2>/dev/null || true
-          find app/build -name "*.apk" -exec cp {} artifacts/ \; 2>/dev/null || true
+          # REMOVE any APK accidentally copied
+          rm -f artifacts/*.apk
+          echo "=== Final artifacts ==="
           ls -lh artifacts/
 
-      - name: Upload artifacts
+      - name: Upload .so only
         uses: actions/upload-artifact@v4
         with:
-          name: yambz-${{ github.sha }}
-          path: artifacts/
+          name: yambz-so-arm64
+          path: artifacts/libyambz.so
           retention-days: 30
-          if-no-files-found: warn
+          if-no-files-found: error
