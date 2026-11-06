@@ -1,6 +1,7 @@
 package com.yambz.bridge;
 
 import android.app.Activity;
+import android.content.Context;
 import android.util.Log;
 import android.view.ViewGroup;
 
@@ -142,4 +143,26 @@ public final class UIBridge {
     //  Native calls (from jni_ui.cpp)
     // ══════════════════════════════════════════════════════════
     private static native void nativeSetCacheDir(String dir);
+
+    private static String sCacheDir = "/data/local/tmp";
+
+    public static String getCacheDir() { return sCacheDir; }
+
+    // Called from JNI
+    private static native void nativeSetCacheDir(String dir);
+
+    private static volatile Context sAppContext = null;
+
+    public static void setAppContext(Context c) { sAppContext = c; }
+    public static Context getAppContext() { return sAppContext; }
+
+    public static String getAlbatrossFeatures() {
+        try {
+            Class<?> a = Class.forName("qing.albatross.core.Albatross");
+            java.lang.reflect.Method m = a.getMethod("supportFeatures");
+            return (String) m.invoke(null);
+        } catch (Throwable t) {
+            return "unknown";
+        }
+    }
 }

@@ -287,7 +287,11 @@ static void drawEvents(OceanUIState& ui) {
         Theme::sectionHeader("Actions");
 
         if (ImGui::Button("Copy")) {
-            Notifications::instance().push("Copied (stub)", 2.0f);
+            char buf[2048];
+            snprintf(buf, sizeof buf, "[%s] %s %s",
+                kindName(e.kind), e.methodDesc.c_str(), e.extra.c_str());
+            yambz_clipboardCopy(buf);
+            Notifications::instance().push("Copied to clipboard", 2.0f);
         }
         ImGui::SameLine();
         if (e.kind == 2) {  // CALL event

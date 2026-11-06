@@ -97,3 +97,24 @@ void yambz_requestClosePanel() {
     if (mid) env->CallStaticVoidMethod(cls, mid);
     if (env->ExceptionCheck()) env->ExceptionClear();
 }
+
+// ═══════════════════════════════════════════════════════════
+//  Clipboard helper (called from any C++ tab)
+// ═══════════════════════════════════════════════════════════
+void yambz_clipboardCopy(const char* text) {
+    if (!text) return;
+    JavaVM* vm = yambz_getVM();
+    if (!vm) return;
+    JNIEnv* env = nullptr;
+    if (vm->GetEnv((void**)&env, JNI_VERSION_1_6) != JNI_OK) {
+        vm->AttachCurrentThread(&env, nullptr);
+    }
+    jclass c = env->FindClass("com/yambz/bridge/ClipboardBridge");
+    if (!c) { env->ExceptionClear(); return; }
+    jmethodID m = env->GetStaticMethodID(c, "copy", "(Ljava/lang/String;)V");
+    if (!m) { env->ExceptionClear(); return; }
+    jstring js = env->NewStringUTF(text);
+    env->CallStaticVoidMethod(c, m, js);
+    env->DeleteLocalRef(js);
+    if (env->ExceptionCheck()) env->ExceptionClear();
+}

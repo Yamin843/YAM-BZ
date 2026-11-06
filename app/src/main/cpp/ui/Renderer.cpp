@@ -2,6 +2,7 @@
 #include "MainWindow.h"
 #include "Notifications.h"
 #include "Theme.h"
+#include "core/Helpers.h"
 #include "../core/Logger.h"
 
 #include <imgui.h>
@@ -109,6 +110,18 @@ void Renderer::onDrawFrame(int w, int h) {
 
     ImGui::NewFrame();
     MainWindow::instance().draw();
+
+    // FPS counter
+    if (yambz_showFps()) {
+        ImGui::SetNextWindowPos(ImVec2(10, 10), ImGuiCond_Always);
+        ImGui::SetNextWindowBgAlpha(0.7f);
+        ImGui::Begin("##fps", nullptr,
+            ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize
+            | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings
+            | ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_AlwaysAutoResize);
+        ImGui::Text("FPS: %.1f", 1.0f / dt);
+        ImGui::End();
+    }
     Notifications::instance().draw();
 
     bool cap = io.WantCaptureMouse || io.WantCaptureMouseUnlessPopupClose;

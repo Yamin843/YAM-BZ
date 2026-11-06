@@ -19,6 +19,9 @@ void        yambz_setCacheDir(const char* dir);
 // ═══════════════════════════════════════════════════════════
 void yambz_notify(const char* msg);
 
+// Clipboard
+void yambz_clipboardCopy(const char* text);
+
 // ═══════════════════════════════════════════════════════════
 //  UI lifecycle (from jni_ui.cpp, called by Java ModBootstrap)
 // ═══════════════════════════════════════════════════════════
@@ -28,3 +31,7 @@ void panel_setJavaVM(JavaVM* vm);
 // ═══════════════════════════════════════════════════════════
 //  Ocean (from trace/OceanState.cpp — called by UI)
 // ═══════════════════════════════════════════════════════════
+
+
+// FPS counter
+bool yambz_showFps();

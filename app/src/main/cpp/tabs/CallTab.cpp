@@ -108,6 +108,104 @@ static std::string buildArgsJson(const std::vector<std::shared_ptr<ParamValue>>&
     return out;
 }
 
+
+// ═══════════════════════════════════════════════════════════
+//  Presets — save/load/list/delete
+// ═══════════════════════════════════════════════════════════
+static std::vector<std::string> g_presetList;  // "name|spec"
+static char g_presetName[128] = {0};
+static int g_selectedPreset = -1;
+
+static std::vector<std::string> jniListPresets() {
+    std::vector<std::string> out;
+    JavaVM* vm = yambz_getVM();
+    if (!vm) return out;
+    JNIEnv* env = nullptr;
+    if (vm->GetEnv((void**)&env, JNI_VERSION_1_6) != JNI_OK) {
+        vm->AttachCurrentThread(&env, nullptr);
+    }
+    jclass c = env->FindClass("com/yambz/bridge/PresetBridge");
+    if (!c) { env->ExceptionClear(); return out; }
+    jmethodID m = env->GetStaticMethodID(c, "list", "()[Ljava/lang/String;");
+    if (!m) { env->ExceptionClear(); return out; }
+    jobjectArray arr = (jobjectArray) env->CallStaticObjectMethod(c, m);
+    if (env->ExceptionCheck() || !arr) { env->ExceptionClear(); return out; }
+    jsize n = env->GetArrayLength(arr);
+    for (jsize i = 0; i < n; i++) {
+        jstring js = (jstring) env->GetObjectArrayElement(arr, i);
+        if (!js) continue;
+        const char* s = env->GetStringUTFChars(js, nullptr);
+        if (s) out.emplace_back(s);
+        if (s) env->ReleaseStringUTFChars(js, s);
+        env->DeleteLocalRef(js);
+    }
+    env->DeleteLocalRef(arr);
+    return out;
+}
+
+static bool jniSavePreset(const char* name, const char* spec, const char* args) {
+    JavaVM* vm = yambz_getVM();
+    if (!vm) return false;
+    JNIEnv* env = nullptr;
+    if (vm->GetEnv((void**)&env, JNI_VERSION_1_6) != JNI_OK) {
+        vm->AttachCurrentThread(&env, nullptr);
+    }
+    jclass c = env->FindClass("com/yambz/bridge/PresetBridge");
+    if (!c) { env->ExceptionClear(); return false; }
+    jmethodID m = env->GetStaticMethodID(c, "save",
+        "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Z");
+    if (!m) { env->ExceptionClear(); return false; }
+    jstring j1 = env->NewStringUTF(name);
+    jstring j2 = env->NewStringUTF(spec);
+    jstring j3 = env->NewStringUTF(args);
+    jboolean r = env->CallStaticBooleanMethod(c, m, j1, j2, j3);
+    env->DeleteLocalRef(j1);
+    env->DeleteLocalRef(j2);
+    env->DeleteLocalRef(j3);
+    if (env->ExceptionCheck()) { env->ExceptionClear(); return false; }
+    return r == JNI_TRUE;
+}
+
+static std::string jniLoadPreset(const char* name) {
+    JavaVM* vm = yambz_getVM();
+    if (!vm) return "";
+    JNIEnv* env = nullptr;
+    if (vm->GetEnv((void**)&env, JNI_VERSION_1_6) != JNI_OK) {
+        vm->AttachCurrentThread(&env, nullptr);
+    }
+    jclass c = env->FindClass("com/yambz/bridge/PresetBridge");
+    if (!c) { env->ExceptionClear(); return ""; }
+    jmethodID m = env->GetStaticMethodID(c, "load", "(Ljava/lang/String;)Ljava/lang/String;");
+    if (!m) { env->ExceptionClear(); return ""; }
+    jstring jn = env->NewStringUTF(name);
+    jstring r = (jstring) env->CallStaticObjectMethod(c, m, jn);
+    env->DeleteLocalRef(jn);
+    std::string out;
+    if (env->ExceptionCheck() || !r) { env->ExceptionClear(); return ""; }
+    const char* s = env->GetStringUTFChars(r, nullptr);
+    if (s) out = s;
+    if (s) env->ReleaseStringUTFChars(r, s);
+    env->DeleteLocalRef(r);
+    return out;
+}
+
+static void jniDeletePreset(const char* name) {
+    JavaVM* vm = yambz_getVM();
+    if (!vm) return;
+    JNIEnv* env = nullptr;
+    if (vm->GetEnv((void**)&env, JNI_VERSION_1_6) != JNI_OK) {
+        vm->AttachCurrentThread(&env, nullptr);
+    }
+    jclass c = env->FindClass("com/yambz/bridge/PresetBridge");
+    if (!c) { env->ExceptionClear(); return; }
+    jmethodID m = env->GetStaticMethodID(c, "delete", "(Ljava/lang/String;)Z");
+    if (!m) { env->ExceptionClear(); return; }
+    jstring jn = env->NewStringUTF(name);
+    env->CallStaticBooleanMethod(c, m, jn);
+    env->DeleteLocalRef(jn);
+    if (env->ExceptionCheck()) env->ExceptionClear();
+}
+
 void CallTab::draw() {
     auto* s = state();
     std::lock_guard<std::mutex> lk(s->mu);
@@ -140,6 +238,72 @@ void CallTab::draw() {
             ImGui::Spacing();
             ImGui::PopID();
         }
+    }
+
+    ImGui::Separator();
+    Theme::sectionHeader("Presets");
+
+    // Refresh list button
+    if (ImGui::Button("Refresh Presets", ImVec2(150, 28))) {
+        g_presetList = jniListPresets();
+    }
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(200);
+    ImGui::InputTextWithHint("##pname", "preset name", g_presetName, sizeof(g_presetName));
+    ImGui::SameLine();
+    if (ImGui::Button("Save Preset", ImVec2(120, 28))) {
+        if (g_presetName[0] && s->spec[0]) {
+            std::string args = buildArgsJson(s->params);
+            if (jniSavePreset(g_presetName, s->spec, args.c_str())) {
+                Notifications::instance().push("Preset saved", 2.0f);
+                g_presetList = jniListPresets();
+            } else {
+                Notifications::instance().push("Save failed", 2.0f);
+            }
+        }
+    }
+
+    // Preset list
+    if (!g_presetList.empty()) {
+        ImGui::BeginChild("##presets", ImVec2(0, 100), true);
+        for (size_t i = 0; i < g_presetList.size(); i++) {
+            const auto& p = g_presetList[i];
+            size_t sep = p.find('|');
+            std::string pname = (sep != std::string::npos) ? p.substr(0, sep) : p;
+            std::string pspec = (sep != std::string::npos) ? p.substr(sep + 1) : "";
+
+            bool sel = (g_selectedPreset == (int)i);
+            if (ImGui::Selectable((pname + "  [" + pspec + "]").c_str(), sel)) {
+                g_selectedPreset = (int)i;
+            }
+            if (ImGui::IsItemHovered()) {
+                ImGui::SameLine();
+                if (ImGui::SmallButton("Load")) {
+                    std::string result = jniLoadPreset(pname.c_str());
+                    size_t bar = result.find('|');
+                    if (bar != std::string::npos) {
+                        std::string spec = result.substr(0, bar);
+                        strncpy(s->spec, spec.c_str(), sizeof(s->spec) - 1);
+                        // Re-parse types
+                        auto types = parseParamTypes(s->spec);
+                        s->paramTypes = types;
+                        s->params.clear();
+                        for (auto& t : types) {
+                            s->params.push_back(ParamValue::forType(t));
+                        }
+                        Notifications::instance().push("Preset loaded", 2.0f);
+                    }
+                }
+                ImGui::SameLine();
+                if (ImGui::SmallButton("×")) {
+                    jniDeletePreset(pname.c_str());
+                    g_presetList = jniListPresets();
+                    ImGui::EndChild();
+                    break;
+                }
+            }
+        }
+        ImGui::EndChild();
     }
 
     ImGui::Separator();
@@ -187,6 +351,11 @@ void CallTab::draw() {
     ImGui::Spacing();
     Theme::sectionHeader("Result");
     if (s->result[0]) {
+        if (ImGui::Button("Copy Result", ImVec2(150, 28))) {
+            yambz_clipboardCopy(s->result);
+            Notifications::instance().push("Result copied", 2.0f);
+        }
+        ImGui::SameLine();
         ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.05f, 0.05f, 0.07f, 1));
         ImGui::BeginChild("##result", ImVec2(0, 200), true);
         ImGui::TextWrapped("%s", s->result);

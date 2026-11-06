@@ -74,6 +74,7 @@ public final class ModBootstrap {
             Log.i(TAG, "  ActivityHook installed ✓");
 
             // 4) Init UI bridge (FAB + Panel)
+            UIBridge.setAppContext(qing.albatross.core.Albatross.currentApplication());
             UIBridge.init(cacheDir);
             Log.i(TAG, "  UIBridge initialized ✓");
 
