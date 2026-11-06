@@ -45,7 +45,7 @@ Java_com_yambz_bridge_CallBridge_nativeInvoke(
     std::string thisStr = tj ? tj : "";
     if (tj) env->ReleaseStringUTFChars(thisJson, tj);
 
-    return yambz_invokeRaw(env, method, spec.methodDesc, thisStr, args) ? JNI_TRUE : JNI_FALSE;
+    return yambz_callEngineInvokeRaw(env, method, spec.methodDesc, thisStr, args) ? JNI_TRUE : JNI_FALSE;
 }
 
 // يُنفذ الاستدعاء بنفس منطق CallEngine لكن من JSON خام

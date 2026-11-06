@@ -189,32 +189,23 @@ void SettingsTab::draw() {
 } // namespace yambz
 
 // ═══════════════════════════════════════════════════════════
-//  Extern C helpers (outside namespace — explicit qualification)
-// ═══════════════════════════════════════════════════════════
-bool yambz_showFps() {
-    // Access via public getter — no direct namespace access
-    // (g_settings is static inside namespace yambz, not visible here)
-    // Use an exported accessor pattern: declare friend or getter below
-    // For simplicity: return from a static function defined inside namespace
-
-    return yambz_settings_showFps();
-}
-
-int yambz_getBacktraceDepth() {
-
-    return yambz_settings_backtraceDepth();
-}
-
-int yambz_getObjectDumpDepth() {
-
-    return yambz_settings_objectDumpDepth();
-}
-
-// ═══════════════════════════════════════════════════════════
-//  Accessor functions inside namespace (to reach static)
+//  Settings accessors INSIDE namespace (can reach g_settings)
 // ═══════════════════════════════════════════════════════════
 namespace yambz {
-    bool yambz_settings_showFps()        { return g_settings.showFps; }
-    int  yambz_settings_backtraceDepth() { return g_settings.graphDepth; }
-    int  yambz_settings_objectDumpDepth(){ return g_settings.objectDumpDepth; }
+    bool settingsShowFps()        { return g_settings.showFps; }
+    int  settingsBacktraceDepth() { return g_settings.graphDepth; }
+    int  settingsObjectDumpDepth(){ return g_settings.objectDumpDepth; }
+}
+
+// ═══════════════════════════════════════════════════════════
+//  GLOBAL helpers (defined once, no weak fallback)
+// ═══════════════════════════════════════════════════════════
+bool yambz_showFps() {
+    return yambz::settingsShowFps();
+}
+int yambz_getBacktraceDepth() {
+    return yambz::settingsBacktraceDepth();
+}
+int yambz_getObjectDumpDepth() {
+    return yambz::settingsObjectDumpDepth();
 }
