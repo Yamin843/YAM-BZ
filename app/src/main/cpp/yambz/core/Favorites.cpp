@@ -1,4 +1,5 @@
 #include "Favorites.h"
+#include <vector>
 #include "Logger.h"
 #include <fstream>
 #include <sstream>

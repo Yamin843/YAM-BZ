@@ -1,4 +1,5 @@
 #include "ErrorContext.h"
+#include <vector>
 #include "Logger.h"
 
 namespace yambz {

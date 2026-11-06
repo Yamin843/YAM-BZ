@@ -1,4 +1,5 @@
 #include "SearchEngine.h"
+#include <vector>
 #include "ClassEnumerator.h"
 #include "Logger.h"
 

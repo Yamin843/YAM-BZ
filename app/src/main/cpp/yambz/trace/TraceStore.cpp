@@ -1,4 +1,5 @@
 #include "TraceStore.h"
+#include <vector>
 #include "../core/Logger.h"
 
 namespace yambz {

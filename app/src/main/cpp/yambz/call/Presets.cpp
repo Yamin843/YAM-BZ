@@ -1,4 +1,5 @@
 #include "Presets.h"
+#include <vector>
 #include "../core/ErrorContext.h"
 
 #include <fstream>

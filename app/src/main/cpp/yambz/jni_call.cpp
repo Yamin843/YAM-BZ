@@ -1,4 +1,5 @@
 #include <jni.h>
+#include <vector>
 #include <cstring>
 #include <android/log.h>
 #include "call/ParamNode.h"

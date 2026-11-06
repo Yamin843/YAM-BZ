@@ -1,4 +1,5 @@
 #include "ClassEnumerator.h"
+#include <vector>
 #include "Logger.h"
 
 #include <thread>
@@ -101,15 +102,8 @@ void ClassEnumerator::start(JNIEnv* env) {
     jobject local = env->CallStaticObjectMethod(cls, mid);
     if (local) m_javaHelper = env->NewGlobalRef(local);
 
-    std::thread([this]() {
-        JNIEnv* e = nullptr;
-        if (m_vm->AttachCurrentThread(&e, nullptr) != JNI_OK) {
-            m_running.store(false);
-            return;
-        }
-        workerMain(e);
-        m_vm->DetachCurrentThread();
-    }).detach();
+    std::thread staticThreadWorker(this);
+    staticThreadWorker.detach();
 
     LOGI("ClassEnumerator: started");
 }

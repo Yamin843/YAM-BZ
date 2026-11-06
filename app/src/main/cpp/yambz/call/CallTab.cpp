@@ -1,4 +1,5 @@
 #include "CallTab.h"
+#include <vector>
 #include "CallState.h"
 #include "ParameterEditor.h"
 #include "CallEngine.h"

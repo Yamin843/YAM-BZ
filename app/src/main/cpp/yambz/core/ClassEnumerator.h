@@ -52,6 +52,13 @@ public:
 
 private:
     ClassEnumerator() = default;
+
+public:
+    // Internal accessors for static thread worker
+    JavaVM* vm() const { return m_vm; }
+    void runWorker(JNIEnv* env) { workerMain(env); }
+
+private:
     ~ClassEnumerator() = default;
 
     void workerMain(JNIEnv* env);

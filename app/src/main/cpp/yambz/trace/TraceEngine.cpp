@@ -1,4 +1,5 @@
 #include "TraceEngine.h"
+#include <vector>
 #include "TraceStore.h"
 #include "../core/Logger.h"
 

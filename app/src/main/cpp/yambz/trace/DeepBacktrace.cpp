@@ -1,4 +1,5 @@
 #include "DeepBacktrace.h"
+#include <vector>
 #include "../core/Logger.h"
 #include <mutex>
 

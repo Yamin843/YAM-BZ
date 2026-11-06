@@ -1,4 +1,5 @@
 #include "History.h"
+#include <vector>
 #include <fstream>
 #include <chrono>
 #include <sstream>

@@ -1,4 +1,5 @@
 #include "TracePresets.h"
+#include <vector>
 #include "../core/ErrorContext.h"
 #include <fstream>
 #include <sstream>

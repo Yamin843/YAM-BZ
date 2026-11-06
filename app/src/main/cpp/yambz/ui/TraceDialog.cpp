@@ -1,4 +1,5 @@
 #include "TraceDialog.h"
+#include <vector>
 #include <string>
 #include "Theme.h"
 #include "Notifications.h"

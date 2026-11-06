@@ -1,4 +1,5 @@
 #include "ClassesTab.h"
+#include <vector>
 #include "SearchBar.h"
 #include "Theme.h"
 #include "ClassesState.h"

@@ -1,4 +1,5 @@
 #include <jni.h>
+#include <vector>
 #include <android/log.h>
 #include <sstream>
 #include <chrono>
